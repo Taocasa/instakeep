@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InstaKeep</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root[data-theme="dark"] {
+      --gold:#c9a84c; --gold-dim:rgba(201,168,76,0.13); --gold-hover:rgba(201,168,76,0.22);
+      --bg:#0a0908; --surface:#131210; --surface2:#1c1a17; --surface3:#242018;
+      --border:rgba(201,168,76,0.18); --text:#e8e0d5; --muted:#7a7266;
+      --danger:#c45c4a; --green:#5cad7a; --shadow:rgba(0,0,0,0.5);
+      --nav-bg:#0e0c0b; --story-grad:linear-gradient(135deg,#c9a84c,#f0d080,#c9a84c);
+    }
+    :root[data-theme="light"] {
+      --gold:#a67c2e; --gold-dim:rgba(166,124,46,0.1); --gold-hover:rgba(166,124,46,0.18);
+      --bg:#fafafa; --surface:#fff; --surface2:#f5f5f5; --surface3:#efefef;
+      --border:rgba(0,0,0,0.1); --text:#1a1a1a; --muted:#8a8a8a;
+      --danger:#c45c4a; --green:#3d8a5a; --shadow:rgba(0,0,0,0.1);
+      --nav-bg:#fff; --story-grad:linear-gradient(135deg,#a67c2e,#e0b84c,#a67c2e);
+    }
+    html { scroll-behavior:smooth; }
+    body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; transition:background 0.3s,color 0.3s; }
+
+    /* ── RESPONSIVE CONTAINER ── */
+    .app-container { max-width:480px; margin:0 auto; position:relative; }
+    @media (min-width:768px) {
+      .app-container { max-width:1100px; display:grid; grid-template-columns:300px 1fr; grid-template-rows:auto 1fr; min-height:100vh; }
+      .top-header { grid-column:1/-1; }
+      .sidebar { display:flex !important; flex-direction:column; border-right:1px solid var(--border); position:sticky; top:57px; height:calc(100vh - 57px); overflow-y:auto; padding-bottom:20px; }
+      .main-content { padding-bottom:20px; }
+      .bottom-nav { display:none !important; }
+      .desktop-nav { display:flex !important; }
+    }
+    @media (max-width:767px) {
+      .sidebar { display:none; }
+      .desktop-nav { display:none !important; }
+    }
+
+    /* ── LOGIN ── */
+    .login-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:28px; padding:24px; }
+    .login-brand { font-family:'Cormorant Garamond',serif; font-size:3rem; font-weight:300; text-align:center; }
+    .login-brand em { color:var(--gold); font-style:italic; }
+    .btn-google { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:0.85rem; font-weight:500; padding:14px 28px; cursor:pointer; border-radius:8px; width:100%; max-width:280px; justify-content:center; transition:all 0.2s; }
+    .btn-google:hover { background:var(--surface2); }
+
+    /* ── TOP HEADER ── */
+    .top-header { position:sticky; top:0; z-index:50; background:var(--bg); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .brand-name { font-family:'Cormorant Garamond',serif; font-size:1.6rem; font-weight:300; }
+    .brand-name em { color:var(--gold); font-style:italic; }
+    .header-right-actions { display:flex; align-items:center; gap:8px; }
+    .hbtn { background:none; border:none; color:var(--text); cursor:pointer; padding:8px; display:flex; align-items:center; justify-content:center; transition:color 0.2s; border-radius:6px; }
+    .hbtn:hover { color:var(--gold); }
+
+    /* ── DESKTOP NAV (sidebar) ── */
+    .desktop-nav { flex-direction:column; gap:4px; padding:20px 16px; }
+    .dnav-btn { display:flex; align-items:center; gap:12px; background:none; border:none; color:var(--muted); cursor:pointer; padding:12px 14px; border-radius:10px; font-size:0.85rem; transition:all 0.2s; width:100%; text-align:left; }
+    .dnav-btn:hover { background:var(--gold-dim); color:var(--gold); }
+    .dnav-btn.active { background:var(--gold-dim); color:var(--gold); font-weight:600; }
+    .dnav-add { background:var(--gold); color:#0a0908; margin-top:8px; font-weight:700; border-radius:10px; }
+    .dnav-add:hover { filter:brightness(1.1); }
+
+    /* ── PROFILE SECTION ── */
+    .profile-section { padding:20px 16px 16px; border-bottom:1px solid var(--border); }
+    @media (min-width:768px) { .profile-section { border-bottom:none; padding:24px 16px 16px; } }
+    .profile-top { display:flex; align-items:center; gap:20px; margin-bottom:14px; }
+    .profile-avatar-ring { width:80px; height:80px; border-radius:50%; padding:3px; background:var(--story-grad); flex-shrink:0; }
+    @media (min-width:768px) { .profile-avatar-ring { width:90px; height:90px; } }
+    .profile-avatar-inner { width:100%; height:100%; border-radius:50%; overflow:hidden; border:2px solid var(--bg); }
+    .profile-avatar-inner img { width:100%; height:100%; object-fit:cover; display:block; }
+    .profile-stats-row { display:flex; gap:20px; }
+    .profile-stat { text-align:center; }
+    .profile-stat-num { font-weight:700; font-size:1rem; display:block; }
+    .profile-stat-label { font-size:0.7rem; color:var(--muted); }
+    .profile-name-full { font-size:0.82rem; font-weight:500; margin-bottom:2px; }
+    .profile-email-small { font-size:0.72rem; color:var(--muted); }
+
+    /* ── STORIES ── */
+    .stories-section { padding:14px 0 10px; border-bottom:1px solid var(--border); }
+    .stories-scroll { display:flex; gap:14px; overflow-x:auto; padding:0 16px; scrollbar-width:none; }
+    .stories-scroll::-webkit-scrollbar { display:none; }
+    .story-item { display:flex; flex-direction:column; align-items:center; gap:5px; flex-shrink:0; cursor:pointer; }
+    .story-ring { width:62px; height:62px; border-radius:50%; padding:2.5px; transition:transform 0.2s; }
+    .story-ring.active { background:var(--story-grad); box-shadow:0 0 12px rgba(201,168,76,0.4); }
+    .story-ring.inactive { background:var(--border); }
+    @media (hover:hover) { .story-ring:hover { transform:scale(1.05); } }
+    .story-inner { width:100%; height:100%; border-radius:50%; background:var(--surface2); border:2px solid var(--bg); display:flex; align-items:center; justify-content:center; font-size:1.3rem; overflow:hidden; }
+
+    /* ── VIEW TOGGLE ── */
+    .view-toggle { display:flex; align-items:center; border-bottom:1px solid var(--border); }
+    .view-btn { flex:1; background:none; border:none; padding:11px; cursor:pointer; color:var(--muted); display:flex; align-items:center; justify-content:center; border-bottom:2px solid transparent; transition:all 0.2s; }
+    .view-btn:hover { color:var(--text); }
+    .view-btn.active { color:var(--gold); border-bottom-color:var(--gold); }
+
+    /* ══════════════════════════════════
+       GRID VIEW — Clipped IG thumbnail
+    ══════════════════════════════════ */
+    .posts-grid-view { display:grid; gap:2px; }
+    .posts-grid-view { grid-template-columns:repeat(3,1fr); }
+    @media (min-width:768px) { .posts-grid-view { grid-template-columns:repeat(4,1fr); gap:3px; } }
+    @media (min-width:1024px) { .posts-grid-view { grid-template-columns:repeat(5,1fr); } }
+
+    .grid-post { aspect-ratio:1; position:relative; overflow:hidden; cursor:pointer; background:var(--surface2); }
+
+    /* Clip the iframe to image-only (hide profile header & footer) */
+    .grid-thumb-clip { width:100%; height:100%; overflow:hidden; position:relative; }
+    .grid-thumb-clip iframe {
+      position:absolute; top:-54px; left:-1px;
+      width:calc(100% + 2px); height:600px;
+      border:none; pointer-events:none; display:block;
+    }
+    .grid-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg,var(--surface2),var(--surface3)); }
+
+    /* Eye overlay — covers native IG play icon */
+    .thumb-eye-overlay {
+      position:absolute; inset:0; z-index:5;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,0.08);
+      cursor:pointer;
+    }
+    .thumb-eye-overlay svg { opacity:0; transition:opacity 0.2s; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
+    .grid-post:hover .thumb-eye-overlay svg,
+    .fp-square:hover .thumb-eye-overlay svg { opacity:1; }
+
+    /* Title overlay — always readable */
+    .grid-title-overlay {
+      position:absolute; bottom:0; left:0; right:0;
+      padding:22px 7px 7px;
+      background:linear-gradient(transparent,rgba(0,0,0,0.82));
+      pointer-events:none;
+    }
+    .grid-title-text {
+      color:rgba(255,255,255,0.96); font-size:0.6rem; font-weight:600;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden; line-height:1.35; text-shadow:0 1px 4px rgba(0,0,0,1);
+    }
+    .grid-hover-overlay {
+      position:absolute; inset:0; background:rgba(0,0,0,0.3);
+      opacity:0; transition:opacity 0.2s;
+      display:flex; align-items:center; justify-content:center;
+    }
+    @media (hover:hover) { .grid-post:hover .grid-hover-overlay { opacity:1; } }
+
+    /* ══════════════════════════════════
+       FEED VIEW — Square thumb + layout
+    ══════════════════════════════════ */
+    .posts-feed-view { display:flex; flex-direction:column; }
+    @media (min-width:768px) { .posts-feed-view { max-width:640px; margin:0 auto; padding:0 20px; } }
+
+    .feed-post { border-bottom:1px solid var(--border); animation:fadeUp 0.3s ease both; }
+
+    /* Image zone — square thumbnail with arrow overlay at top */
+    .fp-image-zone { position:relative; background:var(--surface2); }
+    .fp-square { width:100%; aspect-ratio:1; overflow:hidden; position:relative; }
+    .fp-square iframe {
+      position:absolute; top:-54px; left:-1px;
+      width:calc(100% + 2px); height:600px;
+      border:none; pointer-events:none; display:block;
+    }
+    .fp-no-img { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:var(--surface2); color:var(--muted); font-size:0.72rem; }
+
+    /* Full expand view */
+    .fp-full-view { width:100%; }
+    .fp-full-view iframe { width:100%; min-height:480px; border:none; display:block; }
+
+    /* Arrow button — overlaid at top-left of image */
+    .fp-arrow-btn {
+      position:absolute; top:8px; left:8px; z-index:10;
+      background:rgba(0,0,0,0.55); backdrop-filter:blur(4px);
+      border:none; border-radius:50%; width:32px; height:32px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; color:white; transition:background 0.2s;
+    }
+    .fp-arrow-btn:hover { background:rgba(0,0,0,0.75); }
+    .fp-arrow-btn svg { transition:transform 0.3s; }
+    .fp-arrow-btn.open svg { transform:rotate(180deg); }
+
+    /* Info block below image */
+    .fp-info { padding:10px 14px 12px; }
+    .fp-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:7px; }
+    .fp-title { font-weight:600; font-size:0.88rem; line-height:1.3; flex:1; }
+    .feed-btn-open { display:flex; align-items:center; gap:4px; color:var(--gold); background:var(--gold-dim); border:1px solid rgba(201,168,76,0.2); font-size:0.65rem; padding:5px 10px; cursor:pointer; text-decoration:none; border-radius:6px; transition:all 0.2s; flex-shrink:0; }
+    .feed-btn-open:hover { background:var(--gold-hover); }
+    .fp-meta { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px; align-items:center; }
+    .fp-col-badge { font-size:0.62rem; background:var(--gold-dim); color:var(--gold); border:1px solid rgba(201,168,76,0.2); padding:2px 8px; border-radius:10px; }
+    .fp-tag { font-size:0.72rem; color:var(--gold); cursor:pointer; }
+    .fp-tag:hover { text-decoration:underline; }
+    .fp-note { font-size:0.78rem; color:var(--muted); line-height:1.5; font-style:italic; margin-bottom:8px; }
+    .fp-footer { display:flex; align-items:center; justify-content:space-between; }
+    .fp-actions { display:flex; gap:2px; }
+    .fp-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:6px 8px; display:flex; align-items:center; transition:color 0.2s; border-radius:6px; }
+    .fp-btn:hover { color:var(--gold); }
+    .fp-btn.danger:hover { color:var(--danger); }
+    .fp-btn.share:hover { color:var(--green); }
+    .fp-date { font-size:0.65rem; color:var(--muted); }
+
+    /* ── BOTTOM NAV (mobile only) ── */
+    .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--nav-bg); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-around; padding:8px 0 max(8px,env(safe-area-inset-bottom)); z-index:50; }
+    .nav-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:8px 10px; display:flex; flex-direction:column; align-items:center; gap:3px; transition:color 0.2s; flex:1; }
+    .nav-btn.active { color:var(--text); }
+    .nav-label { font-size:0.56rem; }
+    .nav-btn-add { background:var(--gold); border:none; color:#0a0908; cursor:pointer; width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    /* ── SEARCH ── */
+    .search-page { padding:16px; padding-bottom:80px; }
+    @media (min-width:768px) { .search-page { padding:24px; padding-bottom:24px; max-width:700px; } }
+    .search-input-wrap { position:relative; margin-bottom:16px; }
+    .search-icon-abs { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+    .search-inp { width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:0.85rem; padding:11px 14px 11px 38px; outline:none; border-radius:10px; transition:border-color 0.2s; }
+    .search-inp:focus { border-color:var(--gold); }
+    .search-inp::placeholder { color:var(--muted); }
+    .sort-bar { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; margin-bottom:14px; }
+    .sort-bar::-webkit-scrollbar { display:none; }
+    .sort-pill { background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:0.7rem; padding:6px 14px; border-radius:20px; cursor:pointer; white-space:nowrap; transition:all 0.2s; flex-shrink:0; }
+    .sort-pill.active { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
+
+    /* ── COLLECTIONS ── */
+    .collections-page { padding:16px; padding-bottom:80px; }
+    @media (min-width:768px) { .collections-page { padding:24px; padding-bottom:24px; } }
+    .page-title { font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-weight:300; margin-bottom:16px; }
+    .page-title em { color:var(--gold); font-style:italic; }
+    .col-grid-list { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    @media (min-width:768px) { .col-grid-list { grid-template-columns:repeat(3,1fr); } }
+    .col-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 16px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+    .col-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--story-grad); }
+    @media (hover:hover) { .col-card:hover { border-color:var(--gold); transform:translateY(-2px); } }
+    .col-card-icon { font-size:1.8rem; margin-bottom:8px; }
+    .col-card-name { font-weight:600; font-size:0.9rem; margin-bottom:4px; }
+    .col-card-count { font-size:0.72rem; color:var(--muted); }
+    .col-card-del { position:absolute; top:10px; right:10px; background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; opacity:0; transition:all 0.2s; }
+    .col-card:hover .col-card-del { opacity:1; }
+    .col-card-del:hover { color:var(--danger); }
+    .col-add-card { border:2px dashed var(--border); background:transparent; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:110px; }
+    .col-add-card::before { display:none; }
+    .col-add-card:hover { border-color:var(--gold); background:var(--gold-dim); }
+
+    /* ── PROFILE PAGE ── */
+    .profile-page-full { padding:16px; padding-bottom:80px; }
+    @media (min-width:768px) { .profile-page-full { padding:24px; padding-bottom:24px; max-width:600px; } }
+    .profile-full-hero { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+    .profile-full-avatar { width:80px; height:80px; border-radius:50%; border:3px solid var(--gold); object-fit:cover; }
+    .profile-full-name { font-family:'Cormorant Garamond',serif; font-size:1.4rem; font-weight:300; }
+    .profile-full-name em { color:var(--gold); font-style:italic; }
+    .profile-full-email { font-size:0.7rem; color:var(--muted); margin-top:3px; }
+    .profile-stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px; }
+    .pstat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 8px; text-align:center; }
+    .pstat-num { font-family:'Cormorant Garamond',serif; font-size:1.6rem; font-weight:300; color:var(--gold); display:block; }
+    .pstat-label { font-size:0.55rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-top:2px; }
+    .profile-section-block { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; }
+    .psec-title { font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); margin-bottom:12px; }
+    .top-tags-wrap { display:flex; flex-wrap:wrap; gap:8px; }
+    .top-tag-badge { font-size:0.72rem; padding:5px 12px; background:var(--gold-dim); color:var(--gold); border:1px solid rgba(201,168,76,0.22); border-radius:20px; }
+    .top-tag-badge span { opacity:0.6; font-size:0.62rem; margin-left:4px; }
+    .profile-actions { display:flex; flex-direction:column; gap:8px; }
+    .profile-action-btn { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:0.8rem; padding:12px 16px; cursor:pointer; border-radius:8px; text-align:left; display:flex; align-items:center; gap:10px; transition:all 0.2s; }
+    .profile-action-btn:hover { border-color:var(--gold); color:var(--gold); }
+    .profile-action-btn.danger:hover { border-color:var(--danger); color:var(--danger); }
+
+    /* ── DETAIL MODAL ── */
+    .post-detail-bg { position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:200; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease; }
+    .post-detail { background:var(--bg); width:100%; max-width:480px; height:100%; max-height:100vh; overflow-y:auto; display:flex; flex-direction:column; animation:slideUp 0.3s ease; }
+    @media (min-width:768px) { .post-detail { max-height:90vh; border-radius:16px; } }
+    .post-detail-header { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg); z-index:10; }
+    .post-detail-title { flex:1; font-weight:600; font-size:0.9rem; }
+    .post-detail-body { padding:14px 16px; flex:1; }
+    .post-detail-actions { padding:14px 16px; border-top:1px solid var(--border); }
+
+    /* ── EDIT SHEET ── */
+    .edit-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:150; display:flex; align-items:flex-end; animation:fadeIn 0.2s ease; }
+    .edit-sheet { background:var(--surface); width:100%; max-width:480px; margin:0 auto; border-radius:20px 20px 0 0; padding:20px 20px max(20px,env(safe-area-inset-bottom)); max-height:90vh; overflow-y:auto; animation:slideUp 0.3s ease; }
+    @media (min-width:768px) { .edit-sheet { border-radius:16px; margin:auto; max-height:80vh; } }
+    .sheet-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 16px; }
+    .sheet-title { font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:300; margin-bottom:16px; }
+    .sheet-title em { color:var(--gold); font-style:italic; }
+    .ef-group { margin-bottom:14px; }
+    .ef-label { display:block; font-size:0.68rem; color:var(--muted); margin-bottom:6px; }
+    .ef-input, .ef-textarea { width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:0.85rem; padding:10px 12px; outline:none; border-radius:8px; transition:border-color 0.2s; -webkit-appearance:none; }
+    .ef-input:focus, .ef-textarea:focus { border-color:var(--gold); }
+    .ef-textarea { resize:none; font-family:inherit; }
+    .ef-tag-row { display:flex; gap:8px; }
+    .ef-tag-row .ef-input { flex:1; }
+    .ef-btn-tag { background:var(--gold-dim); border:1px solid var(--gold); color:var(--gold); font-size:0.75rem; padding:0 14px; cursor:pointer; border-radius:8px; white-space:nowrap; }
+    .ef-chips, .ef-col-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .ef-chip { display:flex; align-items:center; gap:4px; background:var(--gold-dim); border:1px solid rgba(201,168,76,0.28); color:var(--gold); font-size:0.68rem; padding:4px 10px; border-radius:14px; }
+    .ef-chip button { background:none; border:none; color:var(--gold); cursor:pointer; opacity:0.6; font-size:0.9rem; line-height:1; }
+    .ef-col-check { font-size:0.72rem; color:var(--muted); cursor:pointer; padding:6px 12px; border:1px solid var(--border); border-radius:20px; transition:all 0.2s; user-select:none; }
+    .ef-col-check.selected { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
+    .ef-error { font-size:0.7rem; color:var(--danger); margin-bottom:10px; }
+    .ef-actions { display:flex; gap:10px; margin-top:16px; }
+    .ef-cancel { flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:0.8rem; padding:12px; cursor:pointer; border-radius:8px; }
+    .ef-save { flex:2; background:var(--gold); border:none; color:#0a0908; font-size:0.8rem; font-weight:600; padding:12px; cursor:pointer; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; }
+
+    /* ── ADD MODAL ── */
+    .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:100; display:flex; align-items:flex-end; animation:fadeIn 0.2s ease; }
+    .modal-sheet { background:var(--surface); width:100%; max-width:480px; margin:0 auto; border-radius:20px 20px 0 0; padding:20px 20px max(20px,env(safe-area-inset-bottom)); max-height:90vh; overflow-y:auto; animation:slideUp 0.3s ease; }
+    @media (min-width:768px) { .modal-bg { align-items:center; } .modal-sheet { border-radius:16px; max-height:80vh; } }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .modal-title { font-family:'Cormorant Garamond',serif; font-size:1.4rem; font-weight:300; }
+    .modal-title em { color:var(--gold); font-style:italic; }
+    .btn-close { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1.2rem; padding:4px 8px; }
+    .form-group { margin-bottom:14px; }
+    .form-label { display:block; font-size:0.68rem; color:var(--muted); margin-bottom:6px; }
+    .form-label .req { color:var(--danger); }
+    .form-input, .form-textarea { width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:0.85rem; padding:11px 13px; outline:none; border-radius:8px; transition:border-color 0.2s; -webkit-appearance:none; }
+    .form-input::placeholder, .form-textarea::placeholder { color:var(--muted); }
+    .form-input:focus, .form-textarea:focus { border-color:var(--gold); }
+    .form-textarea { resize:none; font-family:inherit; }
+    .tag-row { display:flex; gap:8px; }
+    .tag-row .form-input { flex:1; }
+    .btn-tag { background:var(--gold-dim); border:1px solid var(--gold); color:var(--gold); font-size:0.75rem; padding:0 14px; cursor:pointer; border-radius:8px; white-space:nowrap; }
+    .tag-chips, .col-checks { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .tag-chip { display:flex; align-items:center; gap:4px; background:var(--gold-dim); border:1px solid rgba(201,168,76,0.28); color:var(--gold); font-size:0.68rem; padding:4px 10px; border-radius:14px; }
+    .tag-chip button { background:none; border:none; color:var(--gold); cursor:pointer; opacity:0.6; font-size:0.9rem; line-height:1; }
+    .col-check-item { font-size:0.72rem; color:var(--muted); cursor:pointer; padding:6px 12px; border:1px solid var(--border); border-radius:20px; transition:all 0.2s; user-select:none; }
+    .col-check-item.selected { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
+    .form-error { font-size:0.7rem; color:var(--danger); margin-top:6px; }
+    .modal-footer { display:flex; gap:10px; margin-top:18px; }
+    .btn-cancel { flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:0.82rem; padding:12px; cursor:pointer; border-radius:8px; }
+    .btn-save-main { flex:2; background:var(--gold); border:none; color:#0a0908; font-size:0.82rem; font-weight:600; padding:12px; cursor:pointer; border-radius:8px; }
+    .btn-save-main:disabled { opacity:0.45; cursor:not-allowed; }
+
+    /* ── DELETE SHEET ── */
+    .del-sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:300; display:flex; align-items:flex-end; animation:fadeIn 0.15s ease; }
+    .del-sheet { background:var(--surface); width:100%; max-width:480px; margin:0 auto; border-radius:20px 20px 0 0; padding:24px 20px max(20px,env(safe-area-inset-bottom)); animation:slideUp 0.25s ease; }
+    @media (min-width:768px) { .del-sheet-bg { align-items:center; } .del-sheet { border-radius:16px; } }
+    .del-sheet p { font-size:0.9rem; text-align:center; margin-bottom:16px; }
+    .del-sheet-btns { display:flex; gap:10px; }
+    .del-sheet-cancel { flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:0.82rem; padding:12px; cursor:pointer; border-radius:8px; }
+    .del-sheet-confirm { flex:1; background:var(--danger); border:none; color:white; font-size:0.82rem; font-weight:600; padding:12px; cursor:pointer; border-radius:8px; }
+
+    /* ── MISC ── */
+    .main-content { padding-bottom:72px; }
+    @media (min-width:768px) { .main-content { padding-bottom:0; } }
+    .empty-state { text-align:center; padding:60px 20px; }
+    .empty-state-title { font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:300; color:var(--muted); margin:12px 0 6px; }
+    .empty-state-sub { font-size:0.72rem; color:var(--muted); opacity:0.6; }
+    .saving-badge { font-size:0.58rem; color:var(--gold); opacity:0; transition:opacity 0.3s; display:flex; align-items:center; gap:5px; }
+    .saving-badge.show { opacity:1; }
+    .saving-badge .dot { width:5px; height:5px; border-radius:50%; background:var(--gold); animation:pulse 1s infinite; }
+    .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface); border:1px solid var(--gold); color:var(--gold); font-size:0.72rem; padding:10px 20px; opacity:0; transition:all 0.3s; pointer-events:none; white-space:nowrap; z-index:500; border-radius:20px; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    @media (min-width:768px) { .toast { bottom:30px; } }
+
+    @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+    @keyframes slideUp { from{transform:translateY(100%)}to{transform:translateY(0)} }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+    ::-webkit-scrollbar { width:3px; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  </style>
+</head>
+<body>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:"AIzaSyA4cGkFeqsnJNJVBMz70HVT75Uampywjb4",
+    authDomain:"gramarchive-28774.firebaseapp.com",
+    projectId:"gramarchive-28774",
+    storageBucket:"gramarchive-28774.firebasestorage.app",
+    messagingSenderId:"812268176311",
+    appId:"1:812268176311:web:2d005a80ec96edc7645e32"
+  };
+
+  const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getFirestore(app), provider=new GoogleAuthProvider();
+  let posts=[],collections=[],currentUser=null;
+  let searchQuery='',sortBy='date-desc',activeTag='',activeCol='';
+  let viewMode='grid',currentPage='home';
+  let editingPost=null,editTags={},editCols={};
+  let currentTags=[],currentCols=[];
+  let deleteTarget=null,previewState={};
+  let theme=localStorage.getItem('ik-theme')||'dark';
+  document.documentElement.setAttribute('data-theme',theme);
+
+  // ── DOM SHELL ──
+  document.body.innerHTML=`
+    <div id="login-screen" class="login-screen" style="display:none">
+      <div style="color:var(--gold)"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="20" height="20" rx="6"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke-width="2.5"/></svg></div>
+      <h1 class="login-brand">Insta<em>Keep</em></h1>
+      <p style="font-size:0.75rem;color:var(--muted);text-align:center;max-width:260px;line-height:1.6">Sauvegarde et organise tes posts Instagram préférés</p>
+      <button class="btn-google" id="btn-google-login">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.5 30.2 0 24 0 14.6 0 6.6 5.5 2.7 13.5l7.9 6.1C12.5 13.1 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 6.9-10.1 7.1-17z"/><path fill="#FBBC05" d="M10.6 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.1.8-4.5L2.4 13.5A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.2 0-11.5-4.2-13.4-9.8l-8 6.1C6.5 42.4 14.6 48 24 48z"/></svg>
+        Continuer avec Google
+      </button>
+    </div>
+
+    <div id="app-screen" style="display:none">
+      <div class="app-container">
+        <!-- TOP HEADER -->
+        <div class="top-header">
+          <h1 class="brand-name">Insta<em>Keep</em></h1>
+          <div class="header-right-actions">
+            <div class="saving-badge" id="saving-badge"><div class="dot"></div>Sync…</div>
+            <button class="hbtn" id="btn-theme-top"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+          </div>
+        </div>
+
+        <!-- SIDEBAR (desktop only) -->
+        <div class="sidebar">
+          <div class="desktop-nav">
+            <button class="dnav-btn active" id="dnav-home" onclick="window._goPage('home')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Accueil
+            </button>
+            <button class="dnav-btn" id="dnav-search" onclick="window._goPage('search')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Recherche
+            </button>
+            <button class="dnav-btn" id="dnav-collections" onclick="window._goPage('collections')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Collections
+            </button>
+            <button class="dnav-btn" id="dnav-profile" onclick="window._goPage('profile')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profil
+            </button>
+            <button class="dnav-btn dnav-add" id="dnav-add" onclick="window._openModal()" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Ajouter un post
+            </button>
+          </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content" id="main-content"></div>
+
+        <!-- BOTTOM NAV (mobile only) -->
+        <nav class="bottom-nav">
+          <button class="nav-btn active" id="nav-home" onclick="window._goPage('home')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span class="nav-label">Accueil</span>
+          </button>
+          <button class="nav-btn" id="nav-search" onclick="window._goPage('search')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <span class="nav-label">Recherche</span>
+          </button>
+          <button class="nav-btn-add" id="btn-add-nav" onclick="window._openModal()" disabled>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button class="nav-btn" id="nav-collections" onclick="window._goPage('collections')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span class="nav-label">Collections</span>
+          </button>
+          <button class="nav-btn" id="nav-profile" onclick="window._goPage('profile')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="nav-label">Profil</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- ADD MODAL -->
+    <div class="modal-bg" id="add-modal" style="display:none" onclick="if(event.target===this)window._closeModal()">
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+          <h2 class="modal-title">Nouveau <em>post</em></h2>
+          <button class="btn-close" onclick="window._closeModal()">✕</button>
+        </div>
+        <div class="form-group"><label class="form-label">URL Instagram <span class="req">*</span></label><input class="form-input" id="f-url" placeholder="https://www.instagram.com/p/…" /></div>
+        <div class="form-group"><label class="form-label">Titre</label><input class="form-input" id="f-title" placeholder="Ce que ce post évoque pour toi…" /></div>
+        <div class="form-group"><label class="form-label">Note personnelle</label><textarea class="form-textarea" id="f-note" rows="3" placeholder="Pourquoi garder ce post ?"></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <div class="tag-row"><input class="form-input" id="f-tag" placeholder="inspiration, voyage…" onkeydown="window._tagKd(event)" /><button class="btn-tag" onclick="window._addTag()">+ Tag</button></div>
+          <div class="tag-chips" id="tag-chips"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Collections</label><div class="col-checks" id="modal-col-checks"></div></div>
+        <p class="form-error" id="form-error" style="display:none"></p>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="window._closeModal()">Annuler</button>
+          <button class="btn-save-main" id="btn-save" onclick="window._savePost()">Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT SHEET -->
+    <div class="edit-overlay" id="edit-overlay" style="display:none" onclick="if(event.target===this)window._closeEdit()">
+      <div class="edit-sheet">
+        <div class="sheet-handle"></div>
+        <h2 class="sheet-title">Modifier <em>ce post</em></h2>
+        <div class="ef-group"><label class="ef-label">URL</label><input class="ef-input" id="ef-url" /></div>
+        <div class="ef-group"><label class="ef-label">Titre</label><input class="ef-input" id="ef-title" /></div>
+        <div class="ef-group"><label class="ef-label">Note</label><textarea class="ef-textarea" id="ef-note" rows="3"></textarea></div>
+        <div class="ef-group">
+          <label class="ef-label">Tags</label>
+          <div class="ef-tag-row"><input class="ef-input" id="ef-tag" placeholder="Ajouter…" onkeydown="window._editTagKd(event)" /><button class="ef-btn-tag" onclick="window._addEditTagG()">+ Tag</button></div>
+          <div class="ef-chips" id="ef-chips-g"></div>
+        </div>
+        <div class="ef-group"><label class="ef-label">Collections</label><div class="ef-col-list" id="ef-cols-g"></div></div>
+        <p class="ef-error" id="ef-err-g" style="display:none"></p>
+        <div class="ef-actions">
+          <button class="ef-cancel" onclick="window._closeEdit()">Annuler</button>
+          <button class="ef-save" onclick="window._commitEdit()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELETE SHEET -->
+    <div class="del-sheet-bg" id="del-sheet" style="display:none" onclick="if(event.target===this)window._cancelDelete()">
+      <div class="del-sheet">
+        <p>Supprimer ce post définitivement ?</p>
+        <div class="del-sheet-btns">
+          <button class="del-sheet-cancel" onclick="window._cancelDelete()">Annuler</button>
+          <button class="del-sheet-confirm" onclick="window._doDelete()">Supprimer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  `;
+
+  // ── THEME ──
+  document.getElementById('btn-theme-top').onclick=()=>{
+    theme=theme==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',theme);
+    localStorage.setItem('ik-theme',theme);
+  };
+
+  // ── AUTH ──
+  onAuthStateChanged(auth,async user=>{
+    if(user){
+      currentUser=user;
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('app-screen').style.display='block';
+      ['btn-add-nav','dnav-add'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
+      await Promise.all([loadPosts(),loadCollections()]);
+      renderPage('home');
+    } else {
+      currentUser=null;
+      document.getElementById('login-screen').style.display='flex';
+      document.getElementById('app-screen').style.display='none';
+    }
+  });
+  document.getElementById('btn-google-login').onclick=()=>signInWithPopup(auth,provider);
+
+  const postsCol=()=>collection(db,'users',currentUser.uid,'posts');
+  const colsCol=()=>collection(db,'users',currentUser.uid,'collections');
+  async function loadPosts(){try{const s=await getDocs(query(postsCol(),orderBy('createdAt','desc')));posts=s.docs.map(d=>({id:d.id,...d.data()}));}catch(_){posts=[];}}
+  async function loadCollections(){try{const s=await getDocs(colsCol());collections=s.docs.map(d=>({id:d.id,...d.data()}));}catch(_){collections=[];}}
+  function showSaving(on){document.getElementById('saving-badge').classList.toggle('show',on);}
+
+  function extractPostId(url){const m=url.match(/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/);return m?m[1]:null;}
+  function formatDate(iso){return new Date(iso).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});}
+  function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300);}
+  function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function getEmoji(n){const e=['🌟','💫','🔥','💎','🎯','📸','✨','🌈','🎨','🌺','🏆','💡'];let h=0;for(let c of n)h=(h<<5)-h+c.charCodeAt(0);return e[Math.abs(h)%e.length];}
+
+  // ── NAV ──
+  window._goPage=page=>{
+    currentPage=page;
+    ['home','search','collections','profile'].forEach(p=>{
+      ['nav-','dnav-'].forEach(pfx=>{const el=document.getElementById(pfx+p);if(el)el.classList.toggle('active',p===page);});
+    });
+    renderPage(page);
+  };
+  function renderPage(p){
+    const mc=document.getElementById('main-content');
+    if(p==='home')renderHome(mc);
+    else if(p==='search')renderSearch(mc);
+    else if(p==='collections')renderCollections(mc);
+    else if(p==='profile')renderProfile(mc);
+  }
+
+  // ── HOME ──
+  function renderHome(mc){
+    const n=posts.length, now=new Date();
+    const tm=posts.filter(p=>{const d=new Date(p.createdAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
+    mc.innerHTML=`
+      <div class="profile-section">
+        <div class="profile-top">
+          <div class="profile-avatar-ring"><div class="profile-avatar-inner"><img src="${esc(currentUser.photoURL||'')}" alt=""/></div></div>
+          <div style="flex:1">
+            <div class="profile-stats-row">
+              <div class="profile-stat"><span class="profile-stat-num">${n}</span><span class="profile-stat-label">Posts</span></div>
+              <div class="profile-stat"><span class="profile-stat-num">${collections.length}</span><span class="profile-stat-label">Collections</span></div>
+              <div class="profile-stat"><span class="profile-stat-num">${tm}</span><span class="profile-stat-label">Ce mois</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="profile-name-full">${esc(currentUser.displayName||'')}</div>
+        <div class="profile-email-small">${esc(currentUser.email||'')}</div>
+      </div>
+      <div class="stories-section">
+        <div class="stories-scroll">
+          <div class="story-item" onclick="window._filterCol('')">
+            <div class="story-ring ${activeCol===''?'active':'inactive'}"><div class="story-inner">🏠</div></div>
+            <span style="font-size:0.62rem;color:var(--text);max-width:64px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tous</span>
+          </div>
+          ${collections.map(c=>`
+            <div class="story-item" onclick="window._filterCol('${esc(c.id)}')">
+              <div class="story-ring ${activeCol===c.id?'active':'inactive'}"><div class="story-inner">${getEmoji(c.name)}</div></div>
+              <span style="font-size:0.62rem;color:var(--text);max-width:64px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</span>
+            </div>`).join('')}
+          <div class="story-item" onclick="window._newCollection()">
+            <div class="story-ring inactive"><div class="story-inner" style="border:2px dashed var(--gold);background:var(--gold-dim);color:var(--gold);font-size:1.6rem">+</div></div>
+            <span style="font-size:0.62rem;color:var(--muted);text-align:center">Nouvelle</span>
+          </div>
+        </div>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn ${!activeCol&&!activeTag?'active':''}" onclick="window._resetFilters()" title="Tous">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </button>
+        <button class="view-btn ${viewMode==='grid'?'active':''}" onclick="window._setView('grid')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="view-btn ${viewMode==='feed'?'active':''}" onclick="window._setView('feed')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="posts-area"></div>`;
+    renderPostsArea();
+  }
+
+  window._filterCol=id=>{activeCol=id;renderHome(document.getElementById('main-content'));};
+  window._resetFilters=()=>{activeCol='';activeTag='';renderHome(document.getElementById('main-content'));};
+  window._setView=m=>{viewMode=m;renderHome(document.getElementById('main-content'));};
+
+  function getFiltered(){
+    let list=[...posts];
+    if(activeCol)list=list.filter(p=>(p.collections||[]).includes(activeCol));
+    if(activeTag)list=list.filter(p=>(p.tags||[]).includes(activeTag));
+    if(searchQuery){const q=searchQuery.toLowerCase();list=list.filter(p=>p.title.toLowerCase().includes(q)||(p.note||'').toLowerCase().includes(q)||(p.tags||[]).some(t=>t.includes(q)));}
+    switch(sortBy){
+      case 'date-asc':list.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));break;
+      case 'title-asc':list.sort((a,b)=>a.title.localeCompare(b.title));break;
+      case 'title-desc':list.sort((a,b)=>b.title.localeCompare(a.title));break;
+      default:list.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    }
+    return list;
+  }
+
+  function renderPostsArea(){
+    const area=document.getElementById('posts-area');
+    if(!area)return;
+    const filtered=getFiltered();
+    if(!filtered.length){area.innerHTML=`<div class="empty-state"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,0.3)" stroke-width="1.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><p class="empty-state-title">Aucun post encore</p><p class="empty-state-sub">Appuie sur + pour commencer</p></div>`;return;}
+    area.innerHTML=viewMode==='grid'
+      ?`<div class="posts-grid-view">${filtered.map(p=>buildGridPost(p)).join('')}</div>`
+      :`<div class="posts-feed-view">${filtered.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`;
+  }
+
+  // ── GRID POST : iframe clippée image-only + titre overlay ──
+  function buildGridPost(post){
+    return `<div class="grid-post" onclick="window._openDetail('${esc(post.id)}')">
+      <div class="grid-thumb-clip">
+        ${post.postId
+          ?`<iframe src="https://www.instagram.com/p/${esc(post.postId)}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+            <div class="thumb-eye-overlay">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>`
+          :`<div class="grid-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1" opacity="0.35"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke-width="2.5"/></svg></div>`}
+      </div>
+      <div class="grid-title-overlay">
+        <span class="grid-title-text">${esc(post.title)}</span>
+      </div>
+      <div class="grid-hover-overlay"></div>
+    </div>`;
+  }
+
+  // ── FEED POST : carré clipé + flèche en haut + infos dessous ──
+  function buildFeedPost(post,i){
+    const tags=(post.tags||[]).map(t=>`<span class="fp-tag" onclick="window._filterTagFeed('${esc(t)}')">#${esc(t)}</span>`).join('');
+    const colBadges=(post.collections||[]).map(cid=>{const c=collections.find(x=>x.id===cid);return c?`<span class="fp-col-badge">${esc(c.name)}</span>`:''}).join('');
+    const isOpen=!!previewState[post.id];
+    const iframeSrc=post.postId?`https://www.instagram.com/p/${esc(post.postId)}/embed/`:'';
+    const imageZone=iframeSrc?`
+      <div class="fp-image-zone" id="fpz-${esc(post.id)}">
+        ${isOpen
+          ?`<div class="fp-full-view"><iframe src="${iframeSrc}" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
+            <button class="fp-arrow-btn open" onclick="window._toggleFeedPreview('${esc(post.id)}','${esc(post.postId||'')}')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>`
+          :`<div class="fp-square" onclick="window._toggleFeedPreview('${esc(post.id)}','${esc(post.postId||'')}')">
+              <iframe src="${iframeSrc}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+              <div class="thumb-eye-overlay">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+            </div>`}
+      </div>`:'';
+
+    return `<div class="feed-post" id="feed-${esc(post.id)}" style="animation-delay:${i*0.04}s">
+      ${imageZone}
+      <div class="fp-info">
+        <div class="fp-title-row">
+          <span class="fp-title">${esc(post.title)}</span>
+          <a href="${esc(post.url)}" target="_blank" rel="noopener noreferrer" class="feed-btn-open">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Ouvrir
+          </a>
+        </div>
+        ${(colBadges||tags)?`<div class="fp-meta">${colBadges}${tags}</div>`:''}
+        ${post.note?`<p class="fp-note">"${esc(post.note)}"</p>`:''}
+        <div class="fp-footer">
+          <div class="fp-actions">
+            <button class="fp-btn share" onclick="window._sharePost('${esc(post.id)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+            <button class="fp-btn" onclick="window._startEdit('${esc(post.id)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="fp-btn danger" onclick="window._confirmDelete('${esc(post.id)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+          </div>
+          <span class="fp-date">${formatDate(post.createdAt)}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── TOGGLE PREVIEW (carré ↔ plein) ──
+  window._toggleFeedPreview=(id,postId)=>{
+    previewState[id]=!previewState[id];
+    const zone=document.getElementById('fpz-'+id);
+    if(!zone)return;
+    const isOpen=previewState[id];
+    const src=`https://www.instagram.com/p/${postId}/embed/`;
+    zone.innerHTML=`
+      ${isOpen
+        ?`<div class="fp-full-view"><iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
+          <button class="fp-arrow-btn open" onclick="window._toggleFeedPreview('${esc(id)}','${esc(postId)}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>`
+        :`<div class="fp-square" onclick="window._toggleFeedPreview('${esc(id)}','${esc(postId)}')">
+            <iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+            <div class="thumb-eye-overlay">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>`}`;
+  };
+
+  window._filterTagFeed=tag=>{activeTag=activeTag===tag?'':tag;renderHome(document.getElementById('main-content'));};
+
+  // ── GRID DETAIL ──
+  window._openDetail=id=>{
+    const post=posts.find(p=>p.id===id);if(!post)return;
+    const tags=(post.tags||[]).map(t=>`<span class="fp-tag">#${esc(t)}</span>`).join('');
+    const cols=(post.collections||[]).map(cid=>{const c=collections.find(x=>x.id===cid);return c?`<span class="fp-col-badge">${esc(c.name)}</span>`:''}).join('');
+    const d=document.createElement('div');
+    d.className='post-detail-bg';d.id='post-detail-modal';
+    d.innerHTML=`<div class="post-detail">
+      <div class="post-detail-header">
+        <button onclick="document.getElementById('post-detail-modal').remove()" style="background:none;border:none;color:var(--text);cursor:pointer;font-size:1.2rem;padding:4px 8px">←</button>
+        <span class="post-detail-title">${esc(post.title)}</span>
+        <div style="display:flex;gap:4px">
+          <button class="fp-btn share" onclick="window._sharePost('${esc(post.id)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+          <button class="fp-btn" onclick="window._startEdit('${esc(post.id)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="fp-btn danger" onclick="window._confirmDelete('${esc(post.id)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+        </div>
+      </div>
+      <div id="detail-img-zone-${esc(post.id)}" class="fp-image-zone">
+        <div class="fp-square" onclick="window._toggleDetailPreview('${esc(post.id)}','${esc(post.postId||'')}')">
+          <iframe src="https://www.instagram.com/p/${esc(post.postId||'')}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+        </div>
+      </div>
+      <div class="post-detail-body">
+        ${cols||tags?`<div class="fp-meta" style="margin-bottom:10px">${cols}${tags}</div>`:''}
+        ${post.note?`<p class="fp-note">"${esc(post.note)}"</p>`:''}
+        <p style="font-size:0.7rem;color:var(--muted);margin-top:10px">${formatDate(post.createdAt)}</p>
+      </div>
+      <div class="post-detail-actions">
+        <a href="${esc(post.url)}" target="_blank" rel="noopener noreferrer" class="feed-btn-open" style="justify-content:center;text-align:center;width:100%">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Ouvrir sur Instagram
+        </a>
+      </div>
+    </div>`;
+    document.body.appendChild(d);
+  };
+
+  window._toggleDetailPreview=(id,postId)=>{
+    previewState['d-'+id]=!previewState['d-'+id];
+    const zone=document.getElementById('detail-img-zone-'+id);if(!zone)return;
+    const isOpen=previewState['d-'+id];
+    const src=`https://www.instagram.com/p/${postId}/embed/`;
+    zone.innerHTML=`
+      ${isOpen
+        ?`<div class="fp-full-view"><iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
+          <button class="fp-arrow-btn open" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>`
+        :`<div class="fp-square" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
+            <iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+            <div class="thumb-eye-overlay">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>`}`;
+  };
+
+  // ── SEARCH ──
+  function renderSearch(mc){
+    const allTags=[...new Set(posts.flatMap(p=>p.tags||[]))].sort();
+    mc.innerHTML=`<div class="search-page">
+      <div class="search-input-wrap">
+        <span class="search-icon-abs"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+        <input class="search-inp" id="search-inp-page" placeholder="Rechercher…" value="${esc(searchQuery)}" oninput="window._onSearchPage()" autofocus/>
+      </div>
+      <div class="sort-bar">
+        ${['date-desc','date-asc','title-asc','title-desc'].map((s,i)=>{
+          const l=['Plus récent','Plus ancien','Titre A→Z','Titre Z→A'];
+          return `<button class="sort-pill ${sortBy===s?'active':''}" onclick="window._setSortBy('${s}')">${l[i]}</button>`;
+        }).join('')}
+      </div>
+      ${allTags.length?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px">${allTags.map(t=>`<button class="sort-pill ${activeTag===t?'active':''}" onclick="window._filterTagFeed('${esc(t)}')">#${esc(t)}</button>`).join('')}</div>`:''}
+      <div id="search-results"></div>
+    </div>`;
+    renderSearchResults();
+  }
+  window._onSearchPage=()=>{searchQuery=document.getElementById('search-inp-page').value;renderSearchResults();};
+  window._setSortBy=s=>{sortBy=s;if(currentPage==='search')renderSearch(document.getElementById('main-content'));else renderPostsArea();};
+  function renderSearchResults(){
+    const area=document.getElementById('search-results');if(!area)return;
+    const f=getFiltered();
+    area.innerHTML=f.length?`<div class="posts-feed-view">${f.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`:`<div class="empty-state"><p class="empty-state-title">Aucun résultat</p></div>`;
+  }
+
+  // ── COLLECTIONS ──
+  function renderCollections(mc){
+    mc.innerHTML=`<div class="collections-page">
+      <p class="page-title">Mes <em>Collections</em></p>
+      <div class="col-grid-list">
+        ${collections.map(c=>{const cnt=posts.filter(p=>(p.collections||[]).includes(c.id)).length;return `<div class="col-card" onclick="window._filterCol('${esc(c.id)}');window._goPage('home')">
+          <button class="col-card-del" onclick="event.stopPropagation();window._deleteCol('${esc(c.id)}')">✕</button>
+          <div class="col-card-icon">${getEmoji(c.name)}</div>
+          <div class="col-card-name">${esc(c.name)}</div>
+          <div class="col-card-count">${cnt} post${cnt!==1?'s':''}</div>
+        </div>`;}).join('')}
+        <div class="col-card col-add-card" onclick="window._newCollection()">
+          <div style="font-size:1.8rem;color:var(--gold)">+</div>
+          <div style="font-size:0.75rem;color:var(--muted)">Nouvelle collection</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── PROFILE ──
+  function renderProfile(mc){
+    const tc={};posts.forEach(p=>(p.tags||[]).forEach(t=>tc[t]=(tc[t]||0)+1));
+    const topTags=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const now=new Date();
+    const tm=posts.filter(p=>{const d=new Date(p.createdAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
+    mc.innerHTML=`<div class="profile-page-full">
+      <div class="profile-full-hero">
+        <img class="profile-full-avatar" src="${esc(currentUser.photoURL||'')}" alt=""/>
+        <div>
+          <div class="profile-full-name">${esc((currentUser.displayName||'').split(' ')[0])}<em> ${esc((currentUser.displayName||'').split(' ').slice(1).join(' '))}</em></div>
+          <div class="profile-full-email">${esc(currentUser.email||'')}</div>
+        </div>
+      </div>
+      <div class="profile-stats-grid">
+        <div class="pstat"><span class="pstat-num">${posts.length}</span><span class="pstat-label">Posts</span></div>
+        <div class="pstat"><span class="pstat-num">${collections.length}</span><span class="pstat-label">Collections</span></div>
+        <div class="pstat"><span class="pstat-num">${Object.keys(tc).length}</span><span class="pstat-label">Tags</span></div>
+        <div class="pstat"><span class="pstat-num">${tm}</span><span class="pstat-label">Ce mois</span></div>
+      </div>
+      ${topTags.length?`<div class="profile-section-block"><p class="psec-title">Tags les plus utilisés</p><div class="top-tags-wrap">${topTags.map(([t,n])=>`<span class="top-tag-badge">#${esc(t)}<span>${n}</span></span>`).join('')}</div></div>`:''}
+      <div class="profile-section-block">
+        <p class="psec-title">Actions</p>
+        <div class="profile-actions">
+          <button class="profile-action-btn" onclick="window._goPage('collections')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Gérer mes collections</button>
+          <button class="profile-action-btn danger" onclick="window._logout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Se déconnecter</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── COLLECTIONS CRUD ──
+  window._newCollection=async()=>{
+    const name=prompt('Nom de la collection :');if(!name||!name.trim())return;
+    showSaving(true);
+    try{const ref=await addDoc(colsCol(),{name:name.trim(),createdAt:new Date().toISOString()});collections.push({id:ref.id,name:name.trim(),createdAt:new Date().toISOString()});renderPage(currentPage);showToast('Collection créée ✓');}catch(e){showToast('⚠ Erreur');}
+    showSaving(false);
+  };
+  window._deleteCol=async id=>{
+    if(!confirm('Supprimer cette collection ?'))return;
+    showSaving(true);
+    try{
+      await deleteDoc(doc(db,'users',currentUser.uid,'collections',id));
+      collections=collections.filter(c=>c.id!==id);
+      const affected=posts.filter(p=>(p.collections||[]).includes(id));
+      for(const p of affected){const nc=(p.collections||[]).filter(c=>c!==id);await updateDoc(doc(db,'users',currentUser.uid,'posts',p.id),{collections:nc});p.collections=nc;}
+      if(activeCol===id)activeCol='';
+      renderPage(currentPage);showToast('Collection supprimée');
+    }catch(e){showToast('⚠ Erreur');}
+    showSaving(false);
+  };
+
+  // ── SHARE ──
+  window._sharePost=async id=>{
+    const p=posts.find(x=>x.id===id);if(!p)return;
+    if(navigator.share){try{await navigator.share({title:p.title,text:p.note?`${p.title}\n\n${p.note}`:p.title,url:p.url});}catch(e){if(e.name!=='AbortError')showToast('Partage annulé');}}
+    else{try{await navigator.clipboard.writeText(p.url);showToast('Lien copié ✓');}catch(e){showToast('⚠ Impossible de copier');}}
+  };
+
+  // ── ADD ──
+  window._openModal=()=>{
+    currentTags=[];currentCols=[];
+    ['f-url','f-title','f-note','f-tag'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const tc=document.getElementById('tag-chips');if(tc)tc.innerHTML='';
+    const fe=document.getElementById('form-error');if(fe)fe.style.display='none';
+    const bs=document.getElementById('btn-save');if(bs)bs.disabled=false;
+    renderModalCols();
+    document.getElementById('add-modal').style.display='flex';
+    setTimeout(()=>{const u=document.getElementById('f-url');if(u)u.focus();},200);
+  };
+  window._closeModal=()=>document.getElementById('add-modal').style.display='none';
+  window._tagKd=e=>{if(e.key==='Enter'||e.key===','){e.preventDefault();window._addTag();}};
+  window._addTag=()=>{const i=document.getElementById('f-tag');const t=i.value.trim().toLowerCase().replace(/\s+/g,'-');if(t&&!currentTags.includes(t))currentTags.push(t);renderChips();i.value='';i.focus();};
+  window._removeTag=t=>{currentTags=currentTags.filter(x=>x!==t);renderChips();};
+  window._toggleCol=id=>{if(currentCols.includes(id))currentCols=currentCols.filter(c=>c!==id);else currentCols.push(id);renderModalCols();};
+  function renderChips(){const el=document.getElementById('tag-chips');if(el)el.innerHTML=currentTags.map(t=>`<span class="tag-chip">#${esc(t)}<button onclick="window._removeTag('${esc(t)}')">✕</button></span>`).join('');}
+  function renderModalCols(){const el=document.getElementById('modal-col-checks');if(!el)return;el.innerHTML=collections.length?collections.map(c=>`<span class="col-check-item ${currentCols.includes(c.id)?'selected':''}" onclick="window._toggleCol('${esc(c.id)}')">${esc(c.name)}</span>`).join(''):'<span style="font-size:0.7rem;color:var(--muted)">Crée une collection depuis l\'onglet Collections</span>';}
+
+  window._savePost=async()=>{
+    const url=document.getElementById('f-url').value.trim();
+    const title=document.getElementById('f-title').value.trim();
+    const note=document.getElementById('f-note').value.trim();
+    const errEl=document.getElementById('form-error');
+    if(!url){errEl.textContent="⚠ L'URL est obligatoire.";errEl.style.display='block';return;}
+    if(!extractPostId(url)){errEl.textContent="⚠ URL Instagram invalide.";errEl.style.display='block';return;}
+    errEl.style.display='none';document.getElementById('btn-save').disabled=true;showSaving(true);
+    try{
+      const data={url,postId:extractPostId(url),title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,createdAt:new Date().toISOString()};
+      const ref=await addDoc(postsCol(),data);
+      posts.unshift({id:ref.id,...data});
+      renderPage(currentPage);window._closeModal();showToast('Post sauvegardé ✓');
+    }catch(e){showToast('⚠ Erreur');document.getElementById('btn-save').disabled=false;}
+    showSaving(false);
+  };
+
+  // ── EDIT ──
+  window._startEdit=id=>{
+    const post=posts.find(p=>p.id===id);if(!post)return;
+    editingPost=post;
+    editTags['g']=[...(post.tags||[])];editCols['g']=[...(post.collections||[])];
+    document.getElementById('ef-url').value=post.url||'';
+    document.getElementById('ef-title').value=post.title||'';
+    document.getElementById('ef-note').value=post.note||'';
+    document.getElementById('ef-tag').value='';
+    document.getElementById('ef-err-g').style.display='none';
+    renderEditChips();renderEditCols();
+    const dm=document.getElementById('post-detail-modal');if(dm)dm.remove();
+    document.getElementById('edit-overlay').style.display='flex';
+  };
+  window._closeEdit=()=>{document.getElementById('edit-overlay').style.display='none';editingPost=null;};
+  window._editTagKd=e=>{if(e.key==='Enter'||e.key===','){e.preventDefault();window._addEditTagG();}};
+  window._addEditTagG=()=>{const i=document.getElementById('ef-tag');const t=i.value.trim().toLowerCase().replace(/\s+/g,'-');if(!editTags['g'])editTags['g']=[];if(t&&!editTags['g'].includes(t))editTags['g'].push(t);renderEditChips();i.value='';i.focus();};
+  window._removeEditTagG=t=>{editTags['g']=(editTags['g']||[]).filter(x=>x!==t);renderEditChips();};
+  window._toggleEditColG=id=>{if(!editCols['g'])editCols['g']=[];if(editCols['g'].includes(id))editCols['g']=editCols['g'].filter(c=>c!==id);else editCols['g'].push(id);renderEditCols();};
+  function renderEditChips(){const el=document.getElementById('ef-chips-g');if(el)el.innerHTML=(editTags['g']||[]).map(t=>`<span class="ef-chip">#${esc(t)}<button onclick="window._removeEditTagG('${esc(t)}')">✕</button></span>`).join('');}
+  function renderEditCols(){const el=document.getElementById('ef-cols-g');if(el)el.innerHTML=collections.map(c=>`<span class="ef-col-check ${(editCols['g']||[]).includes(c.id)?'selected':''}" onclick="window._toggleEditColG('${esc(c.id)}')">${esc(c.name)}</span>`).join('');}
+
+  window._commitEdit=async()=>{
+    if(!editingPost)return;
+    const id=editingPost.id;
+    const url=document.getElementById('ef-url').value.trim();
+    const title=document.getElementById('ef-title').value.trim();
+    const note=document.getElementById('ef-note').value.trim();
+    const errEl=document.getElementById('ef-err-g');
+    if(!url){errEl.textContent="⚠ URL obligatoire.";errEl.style.display='block';return;}
+    if(!extractPostId(url)){errEl.textContent="⚠ URL invalide.";errEl.style.display='block';return;}
+    errEl.style.display='none';showSaving(true);
+    try{
+      const data={url,postId:extractPostId(url),title:title||'Post sans titre',note,tags:[...(editTags['g']||[])],collections:[...(editCols['g']||[])],updatedAt:new Date().toISOString()};
+      await updateDoc(doc(db,'users',currentUser.uid,'posts',id),data);
+      const idx=posts.findIndex(p=>p.id===id);if(idx!==-1)posts[idx]={...posts[idx],...data};
+      window._closeEdit();renderPage(currentPage);showToast('Post mis à jour ✓');
+    }catch(e){showToast('⚠ Erreur');}
+    showSaving(false);
+  };
+
+  // ── DELETE ──
+  window._confirmDelete=id=>{deleteTarget=id;document.getElementById('del-sheet').style.display='flex';};
+  window._cancelDelete=()=>{deleteTarget=null;document.getElementById('del-sheet').style.display='none';};
+  window._doDelete=async()=>{
+    if(!deleteTarget)return;const id=deleteTarget;
+    document.getElementById('del-sheet').style.display='none';showSaving(true);
+    try{await deleteDoc(doc(db,'users',currentUser.uid,'posts',id));posts=posts.filter(p=>p.id!==id);const dm=document.getElementById('post-detail-modal');if(dm)dm.remove();renderPage(currentPage);showToast('Post supprimé');}
+    catch(e){showToast('⚠ Erreur');}
+    showSaving(false);deleteTarget=null;
+  };
+
+  window._logout=()=>signOut(auth);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){window._closeModal();window._closeEdit();window._cancelDelete();const dm=document.getElementById('post-detail-modal');if(dm)dm.remove();}});
+</script>
+<div class="toast" id="toast"></div>
+</body>
+</html>
