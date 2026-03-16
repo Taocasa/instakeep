@@ -560,7 +560,16 @@
   async function loadCollections(){try{const s=await getDocs(colsCol());collections=s.docs.map(d=>({id:d.id,...d.data()}));}catch(_){collections=[];}}
   function showSaving(on){document.getElementById('saving-badge').classList.toggle('show',on);}
 
-  function extractPostId(url){const m=url.match(/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/);return m?m[1]:null;}
+  // ── FETCH INSTAGRAM THUMBNAIL via oEmbed ──
+  async function fetchIGThumbnail(postId) {
+    try {
+      const url = `https://www.instagram.com/oembed/?url=https://www.instagram.com/p/${postId}/&omitscript=true`;
+      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.thumbnail_url || null;
+    } catch(_) { return null; }
+  }
   function formatDate(iso){return new Date(iso).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});}
   function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300);}
   function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -661,17 +670,15 @@
       :`<div class="posts-feed-view">${filtered.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`;
   }
 
-  // ── GRID POST : iframe clippée image-only + titre overlay ──
+  // ── GRID POST : vraie image thumbnail ──
   function buildGridPost(post){
+    const thumb = post.thumbnailUrl
+      ? `<img src="${esc(post.thumbnailUrl)}" alt="${esc(post.title)}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" />`
+      : post.postId
+        ? `<iframe src="https://www.instagram.com/p/${esc(post.postId)}/embed/" frameborder="0" scrolling="no" allowtransparency="true" style="position:absolute;top:-54px;left:-1px;width:calc(100% + 2px);height:600px;border:none;pointer-events:none;"></iframe>`
+        : `<div class="grid-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1" opacity="0.35"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg></div>`;
     return `<div class="grid-post" onclick="window._openDetail('${esc(post.id)}')">
-      <div class="grid-thumb-clip">
-        ${post.postId
-          ?`<iframe src="https://www.instagram.com/p/${esc(post.postId)}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
-            <div class="thumb-eye-overlay">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </div>`
-          :`<div class="grid-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1" opacity="0.35"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke-width="2.5"/></svg></div>`}
-      </div>
+      <div class="grid-thumb-clip" style="position:relative">${thumb}</div>
       <div class="grid-title-overlay">
         <span class="grid-title-text">${esc(post.title)}</span>
       </div>
@@ -685,6 +692,12 @@
     const colBadges=(post.collections||[]).map(cid=>{const c=collections.find(x=>x.id===cid);return c?`<span class="fp-col-badge">${esc(c.name)}</span>`:''}).join('');
     const isOpen=!!previewState[post.id];
     const iframeSrc=post.postId?`https://www.instagram.com/p/${esc(post.postId)}/embed/`:'';
+    const thumbContent = post.thumbnailUrl
+      ? `<img src="${esc(post.thumbnailUrl)}" alt="${esc(post.title)}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" />`
+      : iframeSrc
+        ? `<iframe src="${iframeSrc}" frameborder="0" scrolling="no" allowtransparency="true" style="position:absolute;top:-54px;left:-1px;width:calc(100% + 2px);height:600px;border:none;pointer-events:none;"></iframe>`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface2)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1" opacity="0.35"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg></div>`;
+
     const imageZone=iframeSrc?`
       <div class="fp-image-zone" id="fpz-${esc(post.id)}">
         ${isOpen
@@ -692,11 +705,8 @@
             <button class="fp-arrow-btn open" onclick="window._toggleFeedPreview('${esc(post.id)}','${esc(post.postId||'')}')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>`
-          :`<div class="fp-square" onclick="window._toggleFeedPreview('${esc(post.id)}','${esc(post.postId||'')}')">
-              <iframe src="${iframeSrc}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
-              <div class="thumb-eye-overlay">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              </div>
+          :`<div class="fp-square" style="position:relative" onclick="window._toggleFeedPreview('${esc(post.id)}','${esc(post.postId||'')}')">
+              ${thumbContent}
             </div>`}
       </div>`:'';
 
@@ -705,10 +715,6 @@
       <div class="fp-info">
         <div class="fp-title-row">
           <span class="fp-title">${esc(post.title)}</span>
-          <a href="${esc(post.url)}" target="_blank" rel="noopener noreferrer" class="feed-btn-open">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-            Ouvrir
-          </a>
         </div>
         ${(colBadges||tags)?`<div class="fp-meta">${colBadges}${tags}</div>`:''}
         ${post.note?`<p class="fp-note">"${esc(post.note)}"</p>`:''}
@@ -933,10 +939,13 @@
     const note=document.getElementById('f-note').value.trim();
     const errEl=document.getElementById('form-error');
     if(!url){errEl.textContent="⚠ L'URL est obligatoire.";errEl.style.display='block';return;}
-    if(!extractPostId(url)){errEl.textContent="⚠ URL Instagram invalide.";errEl.style.display='block';return;}
+    const pid=extractPostId(url);
+    if(!pid){errEl.textContent="⚠ URL Instagram invalide.";errEl.style.display='block';return;}
     errEl.style.display='none';document.getElementById('btn-save').disabled=true;showSaving(true);
     try{
-      const data={url,postId:extractPostId(url),title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,createdAt:new Date().toISOString()};
+      // Fetch thumbnail
+      const thumbnailUrl = await fetchIGThumbnail(pid);
+      const data={url,postId:pid,thumbnailUrl:thumbnailUrl||null,title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,createdAt:new Date().toISOString()};
       const ref=await addDoc(postsCol(),data);
       posts.unshift({id:ref.id,...data});
       renderPage(currentPage);window._closeModal();showToast('Post sauvegardé ✓');
