@@ -97,8 +97,7 @@
     .grid-hover-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.3); opacity:0; transition:opacity 0.2s; display:flex; align-items:center; justify-content:center; }
     @media (hover:hover) { .grid-post:hover .grid-hover-overlay { opacity:1; } }
 
-    /* Patch pour cacher la flèche play native Instagram */
-    .grid-play-mask { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:56px; height:56px; border-radius:50%; background:var(--surface2); z-index:2; pointer-events:none; }
+
 
     .posts-feed-view { display:flex; flex-direction:column; }
     @media (min-width:768px) { .posts-feed-view { max-width:640px; margin:0 auto; padding:0 20px; } }
@@ -107,14 +106,13 @@
     .fp-image-zone { position:relative; background:var(--surface2); }
     .fp-square { width:100%; aspect-ratio:1; overflow:hidden; position:relative; }
     .fp-square iframe { position:absolute; top:-54px; left:-1px; width:calc(100% + 2px); height:600px; border:none; pointer-events:none; display:block; }
-    /* Patch flèche play vue fil */
-    .fp-play-mask { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:56px; height:56px; border-radius:50%; background:var(--surface2); z-index:2; pointer-events:none; }
+
     .fp-full-view { width:100%; }
     .fp-full-view iframe { width:100%; min-height:480px; border:none; display:block; }
-    .fp-arrow-btn { position:absolute; top:8px; left:8px; z-index:10; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:white; transition:background 0.2s; }
-    .fp-arrow-btn:hover { background:rgba(0,0,0,0.75); }
-    .fp-arrow-btn svg { transition:transform 0.3s; }
-    .fp-arrow-btn.open svg { transform:rotate(180deg); }
+    .fp-toggle-detail { display:flex; align-items:center; gap:8px; width:100%; background:var(--surface2); border:none; border-bottom:1px solid var(--border); color:var(--muted); font-family:inherit; font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; padding:12px 16px; cursor:pointer; transition:all 0.2s; }
+    .fp-toggle-detail:hover { color:var(--gold); background:var(--gold-dim); }
+    .fp-toggle-detail svg { transition:transform 0.3s; flex-shrink:0; }
+    .fp-toggle-detail.open svg { transform:rotate(180deg); }
 
     .fp-info { padding:10px 14px 12px; }
     .fp-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:7px; }
@@ -503,8 +501,7 @@
     return `<div class="grid-post" onclick="window._openDetail('${esc(post.id)}')">
       <div class="grid-thumb-clip">
         ${post.postId
-          ?`<iframe src="https://www.instagram.com/p/${esc(post.postId)}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
-            <div class="grid-play-mask"></div>`
+          ?`<iframe src="https://www.instagram.com/p/${esc(post.postId)}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>`
           :`<div class="grid-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1" opacity="0.35"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg></div>`}
       </div>
       <div class="grid-title-overlay"><span class="grid-title-text">${esc(post.title)}</span></div>
@@ -526,7 +523,6 @@
             </button>`
           :`<div class="fp-square" onclick="window._toggleFeedPreview('${esc(post.id)}','${esc(post.postId||'')}')">
               <iframe src="${iframeSrc}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
-              <div class="fp-play-mask"></div>
             </div>`}
       </div>`:'';
     return `<div class="feed-post" id="feed-${esc(post.id)}" style="animation-delay:${i*0.04}s">
@@ -580,18 +576,23 @@
           <button class="fp-btn danger" onclick="window._confirmDelete('${esc(post.id)}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
         </div>
       </div>
-      <div id="detail-img-zone-${esc(post.id)}" class="fp-image-zone">
-        <div class="fp-square" onclick="window._toggleDetailPreview('${esc(post.id)}','${esc(post.postId||'')}')">
-          <iframe src="https://www.instagram.com/p/${esc(post.postId||'')}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
-          <div class="fp-play-mask"></div>
-        </div>
+
+      <!-- Aperçu fermé par défaut — flèche pour ouvrir -->
+      <div id="detail-img-zone-${esc(post.id)}">
+        <button class="fp-toggle-detail" onclick="window._toggleDetailPreview('${esc(post.id)}','${esc(post.postId||'')}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          Voir l'aperçu
+        </button>
       </div>
+
       <div class="post-detail-body">
         ${cols||tags?`<div class="fp-meta" style="margin-bottom:10px">${cols}${tags}</div>`:''}
         ${post.note?`<p class="fp-note">"${esc(post.note)}"</p>`:''}
         <p style="font-size:0.7rem;color:var(--muted);margin-top:10px">${formatDate(post.createdAt)}</p>
       </div>
-      <div class="post-detail-actions">
+
+      <!-- Bouton Instagram masqué par défaut -->
+      <div class="post-detail-actions" id="detail-ig-btn-${esc(post.id)}" style="display:none">
         <a href="${esc(post.url)}" target="_blank" rel="noopener noreferrer" class="feed-btn-open" style="justify-content:center;text-align:center;width:100%">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           Ouvrir sur Instagram
@@ -603,18 +604,27 @@
 
   window._toggleDetailPreview=(id,postId)=>{
     previewState['d-'+id]=!previewState['d-'+id];
-    const zone=document.getElementById('detail-img-zone-'+id);if(!zone)return;
+    const zone=document.getElementById('detail-img-zone-'+id);
+    const igBtn=document.getElementById('detail-ig-btn-'+id);
+    if(!zone)return;
     const isOpen=previewState['d-'+id];
     const src=`https://www.instagram.com/p/${postId}/embed/`;
-    zone.innerHTML=isOpen
-      ?`<div class="fp-full-view"><iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
-         <button class="fp-arrow-btn open" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
-           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-         </button>`
-      :`<div class="fp-square" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
-           <iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
-           <div class="fp-play-mask"></div>
-        </div>`;
+    if(isOpen){
+      zone.innerHTML=`
+        <div class="fp-full-view"><iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
+        <button class="fp-toggle-detail open" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          Masquer l'aperçu
+        </button>`;
+      if(igBtn)igBtn.style.display='block';
+    } else {
+      zone.innerHTML=`
+        <button class="fp-toggle-detail" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          Voir l'aperçu
+        </button>`;
+      if(igBtn)igBtn.style.display='none';
+    }
   };
 
   function renderSearch(mc){
