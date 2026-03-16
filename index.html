@@ -114,14 +114,29 @@
     }
     .grid-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg,var(--surface2),var(--surface3)); }
 
-    /* Eye overlay — covers native IG play icon */
+    /* Overlay — masks native IG play icon completely */
     .thumb-eye-overlay {
       position:absolute; inset:0; z-index:5;
       display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.08);
       cursor:pointer;
+      background:transparent;
     }
-    .thumb-eye-overlay svg { opacity:0; transition:opacity 0.2s; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
+    /* Small patch in center to cover the play button */
+    .thumb-eye-overlay::before {
+      content:'';
+      position:absolute;
+      top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:52px; height:52px;
+      border-radius:50%;
+      background:rgba(10,9,8,0.72);
+      backdrop-filter:blur(2px);
+    }
+    .thumb-eye-overlay svg {
+      position:relative; z-index:1;
+      opacity:0.7; transition:opacity 0.2s;
+      filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));
+    }
     .grid-post:hover .thumb-eye-overlay svg,
     .fp-square:hover .thumb-eye-overlay svg { opacity:1; }
 
