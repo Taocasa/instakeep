@@ -566,6 +566,7 @@
     const tags=(post.tags||[]).map(t=>`<span class="fp-tag">#${esc(t)}</span>`).join('');
     const cols=(post.collections||[]).map(cid=>{const c=collections.find(x=>x.id===cid);return c?`<span class="fp-col-badge">${esc(c.name)}</span>`:''}).join('');
     const d=document.createElement('div');d.className='post-detail-bg';d.id='post-detail-modal';
+    previewState['d-'+id]=true; // ouvert par défaut
     d.innerHTML=`<div class="post-detail">
       <div class="post-detail-header">
         <button onclick="document.getElementById('post-detail-modal').remove()" style="background:none;border:none;color:var(--text);cursor:pointer;font-size:1.2rem;padding:4px 8px">←</button>
@@ -577,11 +578,12 @@
         </div>
       </div>
 
-      <!-- Aperçu fermé par défaut — flèche pour ouvrir -->
+      <!-- Aperçu ouvert par défaut -->
       <div id="detail-img-zone-${esc(post.id)}">
-        <button class="fp-toggle-detail" onclick="window._toggleDetailPreview('${esc(post.id)}','${esc(post.postId||'')}')">
+        <div class="fp-full-view"><iframe src="https://www.instagram.com/p/${esc(post.postId||'')}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
+        <button class="fp-toggle-detail open" onclick="window._toggleDetailPreview('${esc(post.id)}','${esc(post.postId||'')}')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-          Voir l'aperçu
+          Masquer l'aperçu
         </button>
       </div>
 
@@ -591,8 +593,8 @@
         <p style="font-size:0.7rem;color:var(--muted);margin-top:10px">${formatDate(post.createdAt)}</p>
       </div>
 
-      <!-- Bouton Instagram masqué par défaut -->
-      <div class="post-detail-actions" id="detail-ig-btn-${esc(post.id)}" style="display:none">
+      <!-- Bouton Instagram toujours visible dans la fiche -->
+      <div class="post-detail-actions" id="detail-ig-btn-${esc(post.id)}">
         <a href="${esc(post.url)}" target="_blank" rel="noopener noreferrer" class="feed-btn-open" style="justify-content:center;text-align:center;width:100%">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           Ouvrir sur Instagram
@@ -605,26 +607,20 @@
   window._toggleDetailPreview=(id,postId)=>{
     previewState['d-'+id]=!previewState['d-'+id];
     const zone=document.getElementById('detail-img-zone-'+id);
-    const igBtn=document.getElementById('detail-ig-btn-'+id);
     if(!zone)return;
     const isOpen=previewState['d-'+id];
     const src=`https://www.instagram.com/p/${postId}/embed/`;
-    if(isOpen){
-      zone.innerHTML=`
-        <div class="fp-full-view"><iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
+    zone.innerHTML=isOpen
+      ?`<div class="fp-full-view"><iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe></div>
         <button class="fp-toggle-detail open" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           Masquer l'aperçu
-        </button>`;
-      if(igBtn)igBtn.style.display='block';
-    } else {
-      zone.innerHTML=`
-        <button class="fp-toggle-detail" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
+        </button>`
+      :`<button class="fp-toggle-detail" onclick="window._toggleDetailPreview('${esc(id)}','${esc(postId)}')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           Voir l'aperçu
         </button>`;
-      if(igBtn)igBtn.style.display='none';
-    }
+    // Le bouton Instagram reste toujours visible
   };
 
   function renderSearch(mc){
