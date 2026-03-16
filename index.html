@@ -945,16 +945,32 @@
     if(!url){errEl.textContent="⚠ L'URL est obligatoire.";errEl.style.display='block';return;}
     const pid=extractPostId(url);
     if(!pid){errEl.textContent="⚠ URL Instagram invalide.";errEl.style.display='block';return;}
-    errEl.style.display='none';document.getElementById('btn-save').disabled=true;showSaving(true);
+    errEl.style.display='none';
+    document.getElementById('btn-save').disabled=true;
+    showSaving(true);
     try{
-      // Fetch thumbnail (optionnel, n'empêche pas la sauvegarde)
-      let thumbnailUrl = null;
-      try { thumbnailUrl = await fetchIGThumbnail(pid); } catch(_) {}
-      const data={url,postId:pid,thumbnailUrl,title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,createdAt:new Date().toISOString()};
+      // Sauvegarde immédiate sans attendre la miniature
+      const data={url,postId:pid,thumbnailUrl:null,title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,createdAt:new Date().toISOString()};
       const ref=await addDoc(postsCol(),data);
-      posts.unshift({id:ref.id,...data});
-      renderPage(currentPage);window._closeModal();showToast('Post sauvegardé ✓');
-    }catch(e){showToast('⚠ Erreur');document.getElementById('btn-save').disabled=false;}
+      const newPost={id:ref.id,...data};
+      posts.unshift(newPost);
+      renderPage(currentPage);
+      window._closeModal();
+      showToast('Post sauvegardé ✓');
+      // Récupération miniature en arrière-plan
+      fetchIGThumbnail(pid).then(async thumb=>{
+        if(!thumb)return;
+        try{
+          await updateDoc(doc(db,'users',currentUser.uid,'posts',ref.id),{thumbnailUrl:thumb});
+          const idx=posts.findIndex(p=>p.id===ref.id);
+          if(idx!==-1)posts[idx].thumbnailUrl=thumb;
+          renderPostsArea();
+        }catch(_){}
+      });
+    }catch(e){
+      showToast('⚠ Erreur de sauvegarde');
+      document.getElementById('btn-save').disabled=false;
+    }
     showSaving(false);
   };
 
