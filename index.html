@@ -938,38 +938,32 @@
   function renderModalCols(){const el=document.getElementById('modal-col-checks');if(!el)return;el.innerHTML=collections.length?collections.map(c=>`<span class="col-check-item ${currentCols.includes(c.id)?'selected':''}" onclick="window._toggleCol('${esc(c.id)}')">${esc(c.name)}</span>`).join(''):'<span style="font-size:0.7rem;color:var(--muted)">Crée une collection depuis l\'onglet Collections</span>';}
 
   window._savePost=async()=>{
-    const url=document.getElementById('f-url').value.trim();
-    const title=document.getElementById('f-title').value.trim();
-    const note=document.getElementById('f-note').value.trim();
+    const urlEl=document.getElementById('f-url');
+    const titleEl=document.getElementById('f-title');
+    const noteEl=document.getElementById('f-note');
     const errEl=document.getElementById('form-error');
+    const saveBtn=document.getElementById('btn-save');
+    if(!urlEl||!titleEl||!noteEl)return;
+    const url=urlEl.value.trim();
+    const title=titleEl.value.trim();
+    const note=noteEl.value.trim();
     if(!url){errEl.textContent="⚠ L'URL est obligatoire.";errEl.style.display='block';return;}
     const pid=extractPostId(url);
     if(!pid){errEl.textContent="⚠ URL Instagram invalide.";errEl.style.display='block';return;}
     errEl.style.display='none';
-    document.getElementById('btn-save').disabled=true;
+    if(saveBtn)saveBtn.disabled=true;
     showSaving(true);
     try{
-      // Sauvegarde immédiate sans attendre la miniature
       const data={url,postId:pid,thumbnailUrl:null,title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,createdAt:new Date().toISOString()};
       const ref=await addDoc(postsCol(),data);
-      const newPost={id:ref.id,...data};
-      posts.unshift(newPost);
-      renderPage(currentPage);
+      posts.unshift({id:ref.id,...data});
       window._closeModal();
       showToast('Post sauvegardé ✓');
-      // Récupération miniature en arrière-plan
-      fetchIGThumbnail(pid).then(async thumb=>{
-        if(!thumb)return;
-        try{
-          await updateDoc(doc(db,'users',currentUser.uid,'posts',ref.id),{thumbnailUrl:thumb});
-          const idx=posts.findIndex(p=>p.id===ref.id);
-          if(idx!==-1)posts[idx].thumbnailUrl=thumb;
-          renderPostsArea();
-        }catch(_){}
-      });
+      renderPage(currentPage);
     }catch(e){
-      showToast('⚠ Erreur de sauvegarde');
-      document.getElementById('btn-save').disabled=false;
+      console.error('Save error:',e);
+      showToast('⚠ Erreur : '+e.message);
+      if(saveBtn)saveBtn.disabled=false;
     }
     showSaving(false);
   };
