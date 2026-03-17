@@ -279,11 +279,6 @@
     ::-webkit-scrollbar { width:3px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-    /* Banniere hors-ligne */
-    .offline-banner { position:fixed; top:57px; left:0; right:0; z-index:60; background:var(--danger); color:white; font-size:0.72rem; text-align:center; padding:9px 16px; display:flex; align-items:center; justify-content:center; gap:8px; transform:translateY(-110%); transition:transform 0.35s cubic-bezier(.4,0,.2,1); pointer-events:none; }
-    .offline-banner.show { transform:translateY(0); pointer-events:auto; }
-    .offline-banner.back { background:var(--green); }
-
     /* Warning URL doublon */
     .url-dup-warn { font-size:0.7rem; color:var(--danger); margin-top:5px; display:none; padding:6px 10px; background:rgba(196,92,74,0.1); border-radius:6px; border:1px solid rgba(196,92,74,0.3); }
 
@@ -407,12 +402,8 @@
     </div>
     <div class="toast" id="toast"></div>`;
 
-  // ── Bannière hors-ligne ──
-  const offlineBannerHTML=`<div class="offline-banner" id="offline-banner">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
-    Connexion perdue — les modifications ne seront pas sauvegardées
-  </div>
-  <div class="unsaved-bg" id="unsaved-confirm" style="display:none">
+  // ── Confirm modifications non sauvegardees ──
+  document.body.insertAdjacentHTML('beforeend', `<div class="unsaved-bg" id="unsaved-confirm" style="display:none">
     <div class="unsaved-sheet">
       <h3>Modifications non sauvegardées</h3>
       <p>Tu as des changements en cours. Que veux-tu faire ?</p>
@@ -422,28 +413,9 @@
         <button class="unsaved-cancel" id="unsaved-cancel-btn">Continuer à éditer</button>
       </div>
     </div>
-  </div>`;
-  document.body.insertAdjacentHTML('beforeend', offlineBannerHTML);
+  </div>`);
 
   document.getElementById('btn-theme-top').onclick=()=>{theme=theme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('ik-theme',theme);};
-
-  // ── Détection hors-ligne ──
-  function updateOfflineBanner(){
-    const b=document.getElementById('offline-banner');if(!b)return;
-    if(!navigator.onLine){
-      b.classList.remove('back');
-      b.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>Connexion perdue — les modifications ne seront pas sauvegardées`;
-      b.classList.add('show');
-    }
-  }
-  window.addEventListener('offline',()=>updateOfflineBanner());
-  window.addEventListener('online',()=>{
-    const b=document.getElementById('offline-banner');if(!b)return;
-    b.classList.add('back');
-    b.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Connexion rétablie ✓`;
-    setTimeout(()=>{b.classList.remove('show','back');},2500);
-  });
-  if(!navigator.onLine)updateOfflineBanner();
 
   onAuthStateChanged(auth,async user=>{
     if(user){
