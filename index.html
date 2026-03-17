@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InstaKeep</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='none' stroke='%23c9a84c' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='4' fill='none' stroke='%23c9a84c' stroke-width='1.5'/%3E%3Ccircle cx='17' cy='7' r='1.3' fill='%23c9a84c'/%3E%3C/svg%3E"/>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <style>
@@ -277,6 +278,31 @@
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
     ::-webkit-scrollbar { width:3px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+    /* Banniere hors-ligne */
+    .offline-banner { position:fixed; top:57px; left:0; right:0; z-index:60; background:var(--danger); color:white; font-size:0.72rem; text-align:center; padding:9px 16px; display:flex; align-items:center; justify-content:center; gap:8px; transform:translateY(-110%); transition:transform 0.35s cubic-bezier(.4,0,.2,1); pointer-events:none; }
+    .offline-banner.show { transform:translateY(0); pointer-events:auto; }
+    .offline-banner.back { background:var(--green); }
+
+    /* Warning URL doublon */
+    .url-dup-warn { font-size:0.7rem; color:var(--danger); margin-top:5px; display:none; padding:6px 10px; background:rgba(196,92,74,0.1); border-radius:6px; border:1px solid rgba(196,92,74,0.3); }
+
+    /* Confirm modifications non sauvegardees */
+    .unsaved-bg { position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:400; display:flex; align-items:flex-end; animation:fadeIn 0.18s ease; }
+    .unsaved-sheet { background:var(--surface); width:100%; max-width:480px; margin:0 auto; border-radius:20px 20px 0 0; padding:24px 20px max(24px,env(safe-area-inset-bottom)); animation:slideUp 0.28s ease; }
+    @media (min-width:768px) { .unsaved-bg { align-items:center; } .unsaved-sheet { border-radius:16px; max-width:400px; } }
+    .unsaved-sheet h3 { font-size:0.95rem; font-weight:600; margin-bottom:6px; }
+    .unsaved-sheet p { font-size:0.78rem; color:var(--muted); margin-bottom:20px; line-height:1.5; }
+    .unsaved-btns { display:flex; flex-direction:column; gap:9px; }
+    .unsaved-save { background:var(--gold); border:none; color:#0a0908; font-size:0.84rem; font-weight:700; padding:14px; cursor:pointer; border-radius:10px; transition:filter 0.2s; }
+    .unsaved-save:hover { filter:brightness(1.1); }
+    .unsaved-discard { background:transparent; border:1px solid var(--danger); color:var(--danger); font-size:0.84rem; padding:13px; cursor:pointer; border-radius:10px; }
+    .unsaved-cancel { background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:0.84rem; padding:13px; cursor:pointer; border-radius:10px; }
+
+    /* Pagination */
+    .load-more-wrap { padding:18px 16px 24px; text-align:center; }
+    .load-more-btn { background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-size:0.78rem; padding:10px 28px; cursor:pointer; border-radius:20px; transition:all 0.2s; font-family:inherit; }
+    .load-more-btn:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
   </style>
 </head>
 <body>
@@ -302,7 +328,7 @@
   let viewMode='grid',currentPage='home';
   let editingPost=null,editTags={},editCols={};
   let currentTags=[],currentCols=[];
-  let deleteTarget=null,previewState={};
+  let deleteTarget=null,previewState={},postsVisible=20;
   let theme=localStorage.getItem('ik-theme')||'dark';
   document.documentElement.setAttribute('data-theme',theme);
 
@@ -349,7 +375,7 @@
       <div class="modal-sheet">
         <div class="sheet-handle"></div>
         <div class="modal-header"><h2 class="modal-title">Nouveau <em>post</em></h2><button class="btn-close" onclick="window._closeModal()">✕</button></div>
-        <div class="form-group"><label class="form-label">URL Instagram <span class="req">*</span></label><input class="form-input" id="f-url" placeholder="https://www.instagram.com/p/…" /></div>
+        <div class="form-group"><label class="form-label">URL Instagram <span class="req">*</span></label><input class="form-input" id="f-url" placeholder="https://www.instagram.com/p/…" oninput="window._checkUrlDup(this.value)"/><p class="url-dup-warn" id="url-dup-warn"></p></div>
         <div class="form-group"><label class="form-label">Titre</label><input class="form-input" id="f-title" placeholder="Ce que ce post évoque pour toi…" /></div>
         <div class="form-group"><label class="form-label">Note personnelle</label><textarea class="form-textarea" id="f-note" rows="3" placeholder="Pourquoi garder ce post ?"></textarea></div>
         <div class="form-group"><label class="form-label">Tags</label><div class="tag-row"><input class="form-input" id="f-tag" placeholder="inspiration…" onkeydown="window._tagKd(event)" /><button class="btn-tag" onclick="window._addTag()">+ Tag</button></div><div class="tag-chips" id="tag-chips"></div></div>
@@ -381,7 +407,43 @@
     </div>
     <div class="toast" id="toast"></div>`;
 
+  // ── Bannière hors-ligne ──
+  const offlineBannerHTML=`<div class="offline-banner" id="offline-banner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+    Connexion perdue — les modifications ne seront pas sauvegardées
+  </div>
+  <div class="unsaved-bg" id="unsaved-confirm" style="display:none">
+    <div class="unsaved-sheet">
+      <h3>Modifications non sauvegardées</h3>
+      <p>Tu as des changements en cours. Que veux-tu faire ?</p>
+      <div class="unsaved-btns">
+        <button class="unsaved-save" id="unsaved-save-btn">Sauvegarder</button>
+        <button class="unsaved-discard" id="unsaved-discard-btn">Abandonner les modifications</button>
+        <button class="unsaved-cancel" id="unsaved-cancel-btn">Continuer à éditer</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', offlineBannerHTML);
+
   document.getElementById('btn-theme-top').onclick=()=>{theme=theme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('ik-theme',theme);};
+
+  // ── Détection hors-ligne ──
+  function updateOfflineBanner(){
+    const b=document.getElementById('offline-banner');if(!b)return;
+    if(!navigator.onLine){
+      b.classList.remove('back');
+      b.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>Connexion perdue — les modifications ne seront pas sauvegardées`;
+      b.classList.add('show');
+    }
+  }
+  window.addEventListener('offline',()=>updateOfflineBanner());
+  window.addEventListener('online',()=>{
+    const b=document.getElementById('offline-banner');if(!b)return;
+    b.classList.add('back');
+    b.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Connexion rétablie ✓`;
+    setTimeout(()=>{b.classList.remove('show','back');},2500);
+  });
+  if(!navigator.onLine)updateOfflineBanner();
 
   onAuthStateChanged(auth,async user=>{
     if(user){
@@ -470,9 +532,9 @@
     renderPostsArea();
   }
 
-  window._filterCol=id=>{activeCol=id;renderHome(document.getElementById('main-content'));};
-  window._resetFilters=()=>{activeCol='';activeTag='';renderHome(document.getElementById('main-content'));};
-  window._setView=m=>{viewMode=m;renderHome(document.getElementById('main-content'));};
+  window._filterCol=id=>{activeCol=id;postsVisible=20;renderHome(document.getElementById('main-content'));};
+  window._resetFilters=()=>{activeCol='';activeTag='';postsVisible=20;renderHome(document.getElementById('main-content'));};
+  window._setView=m=>{viewMode=m;postsVisible=20;renderHome(document.getElementById('main-content'));};
 
   function getFiltered(){
     let list=[...posts];
@@ -493,10 +555,24 @@
     if(!area)return;
     const filtered=getFiltered();
     if(!filtered.length){area.innerHTML=`<div class="empty-state"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,0.3)" stroke-width="1.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><p class="empty-state-title">Aucun post encore</p><p class="empty-state-sub">Appuie sur + pour commencer</p></div>`;return;}
+    const visible=filtered.slice(0,postsVisible);
+    const remaining=filtered.length-postsVisible;
     area.innerHTML=viewMode==='grid'
-      ?`<div class="posts-grid-view">${filtered.map(p=>buildGridPost(p)).join('')}</div>`
-      :`<div class="posts-feed-view">${filtered.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`;
+      ?`<div class="posts-grid-view">${visible.map(p=>buildGridPost(p)).join('')}</div>`
+      :`<div class="posts-feed-view">${visible.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`;
+    if(remaining>0){
+      const moreDiv=document.createElement('div');
+      moreDiv.className='load-more-wrap';
+      moreDiv.innerHTML=`<button class="load-more-btn" onclick="window._loadMore()">Charger ${Math.min(remaining,20)} de plus <span style="opacity:0.55;font-size:0.65rem">(${remaining} restants)</span></button>`;
+      area.appendChild(moreDiv);
+    } else if(filtered.length>20){
+      const doneDiv=document.createElement('div');
+      doneDiv.style.cssText='text-align:center;padding:12px;font-size:0.65rem;color:var(--muted);opacity:0.6';
+      doneDiv.textContent=`${filtered.length} posts affichés`;
+      area.appendChild(doneDiv);
+    }
   }
+  window._loadMore=()=>{postsVisible+=20;renderPostsArea();};
 
   function buildGridPost(post){
     return `<div class="grid-post" onclick="window._openDetail('${esc(post.id)}')">
@@ -559,7 +635,7 @@
         </div>`;
   };
 
-  window._filterTagFeed=tag=>{activeTag=activeTag===tag?'':tag;renderHome(document.getElementById('main-content'));};
+  window._filterTagFeed=tag=>{activeTag=activeTag===tag?'':tag;postsVisible=20;renderHome(document.getElementById('main-content'));};
 
   window._openDetail=id=>{
     const post=posts.find(p=>p.id===id);if(!post)return;
@@ -634,7 +710,7 @@
     renderSearchResults();
   }
   window._onSearchPage=()=>{searchQuery=document.getElementById('search-inp-page').value;renderSearchResults();};
-  window._setSortBy=s=>{sortBy=s;if(currentPage==='search')renderSearch(document.getElementById('main-content'));else renderPostsArea();};
+  window._setSortBy=s=>{sortBy=s;postsVisible=20;if(currentPage==='search')renderSearch(document.getElementById('main-content'));else renderPostsArea();};
   function renderSearchResults(){const area=document.getElementById('search-results');if(!area)return;const f=getFiltered();area.innerHTML=f.length?`<div class="posts-feed-view">${f.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`:`<div class="empty-state"><p class="empty-state-title">Aucun résultat</p></div>`;}
 
   function renderCollections(mc){
@@ -694,17 +770,53 @@
     else{try{await navigator.clipboard.writeText(p.url);showToast('Lien copié ✓');}catch(e){showToast('⚠ Impossible de copier');}}
   };
 
+  // ── Confirm modifications non sauvegardees ──
+  function showUnsavedConfirm(onSave,onDiscard){
+    const bg=document.getElementById('unsaved-confirm');
+    if(!bg)return;
+    bg.style.display='flex';
+    document.getElementById('unsaved-save-btn').onclick=()=>{bg.style.display='none';onSave();};
+    document.getElementById('unsaved-discard-btn').onclick=()=>{bg.style.display='none';onDiscard();};
+    document.getElementById('unsaved-cancel-btn').onclick=()=>{bg.style.display='none';};
+  }
+
+  // ── Dedup URL live ──
+  window._checkUrlDup=val=>{
+    const dw=document.getElementById('url-dup-warn');if(!dw)return;
+    const pid=extractPostId(val.trim());
+    if(pid){
+      const ex=posts.find(p=>p.postId===pid);
+      if(ex){dw.textContent=`⚠ Déjà sauvegardé : "${ex.title}"`;dw.style.display='block';return;}
+    }
+    dw.style.display='none';
+  };
+
   window._openModal=()=>{
     currentTags=[];currentCols=[];
     ['f-url','f-title','f-note','f-tag'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const tc=document.getElementById('tag-chips');if(tc)tc.innerHTML='';
     const fe=document.getElementById('form-error');if(fe)fe.style.display='none';
+    const dw=document.getElementById('url-dup-warn');if(dw)dw.style.display='none';
     const bs=document.getElementById('btn-save');if(bs)bs.disabled=false;
     renderModalCols();
     document.getElementById('add-modal').style.display='flex';
     setTimeout(()=>{const u=document.getElementById('f-url');if(u)u.focus();},200);
   };
-  window._closeModal=()=>document.getElementById('add-modal').style.display='none';
+
+  window._closeModal=()=>{
+    const url=(document.getElementById('f-url')?.value||'').trim();
+    const title=(document.getElementById('f-title')?.value||'').trim();
+    const note=(document.getElementById('f-note')?.value||'').trim();
+    const isDirty=url||title||note||currentTags.length||currentCols.length;
+    if(isDirty){
+      showUnsavedConfirm(
+        ()=>window._savePost(),
+        ()=>{document.getElementById('add-modal').style.display='none';}
+      );
+    } else {
+      document.getElementById('add-modal').style.display='none';
+    }
+  };
   window._tagKd=e=>{if(e.key==='Enter'||e.key===','){e.preventDefault();window._addTag();}};
   window._addTag=()=>{const i=document.getElementById('f-tag');const t=i.value.trim().toLowerCase().replace(/\s+/g,'-');if(t&&!currentTags.includes(t))currentTags.push(t);renderChips();i.value='';i.focus();};
   window._removeTag=t=>{currentTags=currentTags.filter(x=>x!==t);renderChips();};
@@ -721,6 +833,8 @@
     if(!url){errEl.textContent="⚠ L'URL est obligatoire.";errEl.style.display='block';return;}
     const pid=extractPostId(url);
     if(!pid){errEl.textContent="⚠ URL Instagram invalide.";errEl.style.display='block';return;}
+    const dupPost=posts.find(p=>p.postId===pid);
+    if(dupPost){errEl.textContent=`⚠ Ce post est déjà sauvegardé : "${dupPost.title}"`;errEl.style.display='block';return;}
     errEl.style.display='none';
     if(saveBtn)saveBtn.disabled=true;
     showSaving(true);
@@ -751,7 +865,25 @@
     const dm=document.getElementById('post-detail-modal');if(dm)dm.remove();
     document.getElementById('edit-overlay').style.display='flex';
   };
-  window._closeEdit=()=>{document.getElementById('edit-overlay').style.display='none';editingPost=null;};
+  window._closeEdit=()=>{
+    if(!editingPost){document.getElementById('edit-overlay').style.display='none';return;}
+    const url=(document.getElementById('ef-url')?.value||'').trim();
+    const title=(document.getElementById('ef-title')?.value||'').trim();
+    const note=(document.getElementById('ef-note')?.value||'').trim();
+    const origTags=JSON.stringify([...(editingPost.tags||[])].sort());
+    const curTags=JSON.stringify([...(editTags['g']||[])].sort());
+    const origCols=JSON.stringify([...(editingPost.collections||[])].sort());
+    const curCols=JSON.stringify([...(editCols['g']||[])].sort());
+    const isDirty=url!==(editingPost.url||'')||title!==(editingPost.title||'')||note!==(editingPost.note||'')||origTags!==curTags||origCols!==curCols;
+    if(isDirty){
+      showUnsavedConfirm(
+        ()=>window._commitEdit(),
+        ()=>{document.getElementById('edit-overlay').style.display='none';editingPost=null;}
+      );
+    } else {
+      document.getElementById('edit-overlay').style.display='none';editingPost=null;
+    }
+  };
   window._editTagKd=e=>{if(e.key==='Enter'||e.key===','){e.preventDefault();window._addEditTagG();}};
   window._addEditTagG=()=>{const i=document.getElementById('ef-tag');const t=i.value.trim().toLowerCase().replace(/\s+/g,'-');if(!editTags['g'])editTags['g']=[];if(t&&!editTags['g'].includes(t))editTags['g'].push(t);renderEditChips();i.value='';i.focus();};
   window._removeEditTagG=t=>{editTags['g']=(editTags['g']||[]).filter(x=>x!==t);renderEditChips();};
@@ -791,7 +923,14 @@
   };
 
   window._logout=()=>signOut(auth);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){window._closeModal();window._closeEdit();window._cancelDelete();const dm=document.getElementById('post-detail-modal');if(dm)dm.remove();}});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      const uc=document.getElementById('unsaved-confirm');
+      if(uc&&uc.style.display!=='none'){uc.style.display='none';return;}
+      window._closeModal();window._closeEdit();window._cancelDelete();
+      const dm=document.getElementById('post-detail-modal');if(dm)dm.remove();
+    }
+  });
 </script>
 <div class="toast" id="toast"></div>
 </body>
