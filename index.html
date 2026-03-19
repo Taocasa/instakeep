@@ -461,16 +461,7 @@
       const oembed=await fetch(`https://graph.facebook.com/v17.0/instagram_oembed?url=${encodeURIComponent(postUrl)}&access_token=${encodeURIComponent(token)}`);
       if(!oembed.ok)return null;
       const data=await oembed.json();
-      if(!data.thumbnail_url)return null;
-      const imgResp=await fetch(data.thumbnail_url);
-      if(!imgResp.ok)return null;
-      const blob=await imgResp.blob();
-      return await new Promise(resolve=>{
-        const r=new FileReader();
-        r.onloadend=()=>resolve(r.result);
-        r.onerror=()=>resolve(null);
-        r.readAsDataURL(blob);
-      });
+      return data.thumbnail_url||null;
     }catch(e){return null;}
   }
 
