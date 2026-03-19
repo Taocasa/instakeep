@@ -807,6 +807,11 @@
     setTimeout(()=>{const u=document.getElementById('f-url');if(u)u.focus();},200);
   };
 
+  function forceCloseModal(){
+    currentTags=[];currentCols=[];
+    ['f-url','f-title','f-note','f-tag'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('add-modal').style.display='none';
+  }
   window._closeModal=()=>{
     const url=(document.getElementById('f-url')?.value||'').trim();
     const title=(document.getElementById('f-title')?.value||'').trim();
@@ -815,10 +820,10 @@
     if(isDirty){
       showUnsavedConfirm(
         ()=>window._savePost(),
-        ()=>{document.getElementById('add-modal').style.display='none';}
+        ()=>forceCloseModal()
       );
     } else {
-      document.getElementById('add-modal').style.display='none';
+      forceCloseModal();
     }
   };
   window._tagKd=e=>{if(e.key==='Enter'||e.key===','){e.preventDefault();window._addTag();}};
@@ -848,8 +853,8 @@
       if(thumbnail)data.thumbnail=thumbnail;
       const ref=await addDoc(postsCol(),data);
       posts.unshift({id:ref.id,...data});
-      window._closeModal();
-      showToast('Post sauvegardé ✓');
+      forceCloseModal();
+      showToast(thumbnail?'Post sauvegardé ✓ (miniature récupérée)':'Post sauvegardé ✓ (pas de miniature)');
       renderPage(currentPage);
     }catch(e){
       showToast('⚠ Erreur : '+e.message);
