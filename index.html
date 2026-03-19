@@ -511,7 +511,7 @@
         </div>
       </div></div>
       <div class="view-toggle">
-        <button class="view-btn ${!activeCol&&!activeTag?'active':''}" onclick="window._resetFilters()">
+        <button class="view-btn ${viewMode===''?'active':''}" onclick="window._resetFilters()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </button>
         <button class="view-btn ${viewMode==='grid'?'active':''}" onclick="window._setView('grid')">
@@ -526,7 +526,7 @@
   }
 
   window._filterCol=id=>{activeCol=id;postsVisible=20;renderHome(document.getElementById('main-content'));};
-  window._resetFilters=()=>{activeCol='';activeTag='';postsVisible=20;renderHome(document.getElementById('main-content'));};
+  window._resetFilters=()=>{activeCol='';activeTag='';viewMode='';postsVisible=20;renderHome(document.getElementById('main-content'));};
   window._setView=m=>{viewMode=m;postsVisible=20;renderHome(document.getElementById('main-content'));};
 
   function getFiltered(){
@@ -550,9 +550,9 @@
     if(!filtered.length){area.innerHTML=`<div class="empty-state"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,0.3)" stroke-width="1.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><p class="empty-state-title">Aucun post encore</p><p class="empty-state-sub">Appuie sur + pour commencer</p></div>`;return;}
     const visible=filtered.slice(0,postsVisible);
     const remaining=filtered.length-postsVisible;
-    area.innerHTML=viewMode==='grid'
-      ?`<div class="posts-grid-view">${visible.map(p=>buildGridPost(p)).join('')}</div>`
-      :`<div class="posts-feed-view">${visible.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`;
+    area.innerHTML=viewMode==='feed'
+      ?`<div class="posts-feed-view">${visible.map((p,i)=>buildFeedPost(p,i)).join('')}</div>`
+      :`<div class="posts-grid-view">${visible.map(p=>buildGridPost(p)).join('')}</div>`;
     if(remaining>0){
       const moreDiv=document.createElement('div');
       moreDiv.className='load-more-wrap';
