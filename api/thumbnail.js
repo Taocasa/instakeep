@@ -9,28 +9,47 @@ export default async function handler(req, res) {
   const postId = match[1];
 
   const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.7',
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'fr-FR,fr;q=0.9',
     'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
   };
 
   let thumbnailUrl = null;
 
+  // Essai 1 : API JSON Instagram
   try {
-    const embedResp = await fetch(`https://www.instagram.com/p/${postId}/embed/`, { headers });
-    const html = await embedResp.text();
-    const patterns = [
-      /"display_url":"([^"]+)"/i,
-      /src="(https:\/\/[^"]*cdninstagram[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/i,
-      /<img[^>]+src="(https:\/\/[^"]*scontent[^"]*)"[^>]*>/i,
-    ];
-    for (const p of patterns) {
-      const m = html.match(p);
-      if (m) { thumbnailUrl = m[1].replace(/\\u0026/g, '&').replace(/&amp;/g, '&'); break; }
+    const jsonResp = await fetch(`https://www.instagram.com/p/${postId}/?__a=1&__d=dis`, {
+      headers: { ...headers, 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const json = await jsonResp.json();
+    const media = json?.items?.[0] || json?.graphql?.shortcode_media;
+    if (media) {
+      thumbnailUrl = media.image_versions2?.candidates?.[0]?.url
+        || media.thumbnail_src
+        || media.display_url;
     }
   } catch(e) {}
 
+  // Essai 2 : page mobile embed
+  if (!thumbnailUrl) {
+    try {
+      const embedResp = await fetch(`https://www.instagram.com/p/${postId}/embed/captioned/`, { headers });
+      const html = await embedResp.text();
+      const patterns = [
+        /"display_url":"([^"]+)"/,
+        /background-image: url\('([^']+)'\)/,
+        /src="(https:\/\/[^"]*(?:cdninstagram|scontent)[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/,
+      ];
+      for (const p of patterns) {
+        const m = html.match(p);
+        if (m) { thumbnailUrl = m[1].replace(/\\u0026/g, '&').replace(/&amp;/g, '&'); break; }
+      }
+    } catch(e) {}
+  }
+
+  // Essai 3 : og:image page principale avec cookie mobile
   if (!thumbnailUrl) {
     try {
       const resp = await fetch(`https://www.instagram.com/p/${postId}/`, { headers });
@@ -43,23 +62,24 @@ export default async function handler(req, res) {
 
   if (!thumbnailUrl) return res.status(404).json({ error: 'Miniature introuvable' });
 
-  // Télécharger et convertir en base64 pour stockage permanent
+  // Proxy l'image en base64
   try {
     const imgResp = await fetch(thumbnailUrl, {
       headers: {
         'User-Agent': headers['User-Agent'],
-        'Referer': 'https://www.instagram.com/'
+        'Referer': 'https://www.instagram.com/',
+        'Origin': 'https://www.instagram.com',
       }
     });
-    if (!imgResp.ok) return res.status(404).json({ error: 'Image inaccessible' });
-
+    if (!imgResp.ok) {
+      // Si le téléchargement échoue, retourner l'URL directe
+      return res.status(200).json({ thumbnail: thumbnailUrl });
+    }
     const contentType = imgResp.headers.get('content-type') || 'image/jpeg';
     const buffer = await imgResp.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
-    const dataUrl = `data:${contentType};base64,${base64}`;
-
-    return res.status(200).json({ thumbnail: dataUrl });
+    return res.status(200).json({ thumbnail: `data:${contentType};base64,${base64}` });
   } catch(e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(200).json({ thumbnail: thumbnailUrl });
   }
 }
