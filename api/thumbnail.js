@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
   if (!thumbnailUrl) return res.status(404).json({ error: 'Miniature introuvable' });
 
-  // Proxy l'image directement
+  // Télécharger et convertir en base64 pour stockage permanent
   try {
     const imgResp = await fetch(thumbnailUrl, {
       headers: {
@@ -55,10 +55,10 @@ export default async function handler(req, res) {
 
     const contentType = imgResp.headers.get('content-type') || 'image/jpeg';
     const buffer = await imgResp.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    const dataUrl = `data:${contentType};base64,${base64}`;
 
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    return res.status(200).send(Buffer.from(buffer));
+    return res.status(200).json({ thumbnail: dataUrl });
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
