@@ -455,17 +455,12 @@
   };
 
   async function fetchThumbnail(postUrl){
-    const token=getMetaToken();
-    if(!token){console.log('[oEmbed] Pas de token');return null;}
     try{
-      const endpoint=`https://graph.facebook.com/v17.0/instagram_oembed?url=${encodeURIComponent(postUrl)}&access_token=${encodeURIComponent(token)}`;
-      console.log('[oEmbed] Appel:', endpoint);
-      const oembed=await fetch(endpoint);
-      const data=await oembed.json();
-      console.log('[oEmbed] Réponse:', JSON.stringify(data));
-      if(!oembed.ok||data.error){console.log('[oEmbed] Erreur API:', data.error);return null;}
-      return data.thumbnail_url||null;
-    }catch(e){console.log('[oEmbed] Exception:', e.message);return null;}
+      const resp=await fetch(`/api/thumbnail?url=${encodeURIComponent(postUrl)}`);
+      if(!resp.ok)return null;
+      const data=await resp.json();
+      return data.thumbnail||null;
+    }catch(e){console.log('[thumbnail] Erreur:',e.message);return null;}
   }
 
   function getEmoji(n){const e=['🌟','💫','🔥','💎','🎯','📸','✨','🌈','🎨','🌺','🏆','💡'];let h=0;for(let c of n)h=(h<<5)-h+c.charCodeAt(0);return e[Math.abs(h)%e.length];}
