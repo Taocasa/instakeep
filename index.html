@@ -460,7 +460,7 @@
       if(!resp.ok)return null;
       const data=await resp.json();
       return data.thumbnail||null;
-    }catch(e){console.log('[thumbnail] Erreur:',e.message);return null;}
+    }catch(e){return null;}
   }
 
   function getEmoji(n){const e=['🌟','💫','🔥','💎','🎯','📸','✨','🌈','🎨','🌺','🏆','💡'];let h=0;for(let c of n)h=(h<<5)-h+c.charCodeAt(0);return e[Math.abs(h)%e.length];}
