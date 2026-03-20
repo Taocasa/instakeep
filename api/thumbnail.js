@@ -1,85 +1,31 @@
 export default async function handler(req, res) {
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { url } = req.query;
-  if (!url) return res.status(400).json({ error: 'URL manquante' });
+  if (!url) return res.status(400).json({ error: 'Paramètre url manquant' });
 
-  const match = url.match(/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/);
-  if (!match) return res.status(400).json({ error: 'URL invalide' });
-  const postId = match[1];
+  const token = process.env.META_TOKEN;
+  if (!token) return res.status(500).json({ error: 'Token Meta non configuré sur Vercel' });
 
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'fr-FR,fr;q=0.9',
-    'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache',
-  };
-
-  let thumbnailUrl = null;
-
-  // Essai 1 : API JSON Instagram
   try {
-    const jsonResp = await fetch(`https://www.instagram.com/p/${postId}/?__a=1&__d=dis`, {
-      headers: { ...headers, 'X-Requested-With': 'XMLHttpRequest' }
-    });
-    const json = await jsonResp.json();
-    const media = json?.items?.[0] || json?.graphql?.shortcode_media;
-    if (media) {
-      thumbnailUrl = media.image_versions2?.candidates?.[0]?.url
-        || media.thumbnail_src
-        || media.display_url;
+    const oembedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=${token}&fields=thumbnail_url,title,author_name`;
+    const resp = await fetch(oembedUrl);
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      return res.status(resp.status).json({ error: err.error?.message || 'Erreur oEmbed' });
     }
-  } catch(e) {}
 
-  // Essai 2 : page mobile embed
-  if (!thumbnailUrl) {
-    try {
-      const embedResp = await fetch(`https://www.instagram.com/p/${postId}/embed/captioned/`, { headers });
-      const html = await embedResp.text();
-      const patterns = [
-        /"display_url":"([^"]+)"/,
-        /background-image: url\('([^']+)'\)/,
-        /src="(https:\/\/[^"]*(?:cdninstagram|scontent)[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/,
-      ];
-      for (const p of patterns) {
-        const m = html.match(p);
-        if (m) { thumbnailUrl = m[1].replace(/\\u0026/g, '&').replace(/&amp;/g, '&'); break; }
-      }
-    } catch(e) {}
-  }
-
-  // Essai 3 : og:image page principale avec cookie mobile
-  if (!thumbnailUrl) {
-    try {
-      const resp = await fetch(`https://www.instagram.com/p/${postId}/`, { headers });
-      const html = await resp.text();
-      const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-      if (m) thumbnailUrl = m[1].replace(/&amp;/g, '&');
-    } catch(e) {}
-  }
-
-  if (!thumbnailUrl) return res.status(404).json({ error: 'Miniature introuvable' });
-
-  // Proxy l'image en base64
-  try {
-    const imgResp = await fetch(thumbnailUrl, {
-      headers: {
-        'User-Agent': headers['User-Agent'],
-        'Referer': 'https://www.instagram.com/',
-        'Origin': 'https://www.instagram.com',
-      }
+    const data = await resp.json();
+    return res.status(200).json({
+      thumbnail: data.thumbnail_url || null,
+      title: data.title || null,
+      author: data.author_name || null
     });
-    if (!imgResp.ok) {
-      // Si le téléchargement échoue, retourner l'URL directe
-      return res.status(200).json({ thumbnail: thumbnailUrl });
-    }
-    const contentType = imgResp.headers.get('content-type') || 'image/jpeg';
-    const buffer = await imgResp.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
-    return res.status(200).json({ thumbnail: `data:${contentType};base64,${base64}` });
-  } catch(e) {
-    return res.status(200).json({ thumbnail: thumbnailUrl });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
   }
 }
