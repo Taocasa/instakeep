@@ -352,8 +352,7 @@
       <div class="modal-sheet">
         <div class="sheet-handle"></div>
         <div class="modal-header"><h2 class="modal-title">Nouveau <em>post</em></h2><button class="btn-close" onclick="window._closeModal()">✕</button></div>
-        <div class="form-group"><label class="form-label">URL Instagram <span class="req">*</span></label><input class="form-input" id="f-url" placeholder="https://www.instagram.com/p/…" /></div>
-        <div class="form-group"><label class="form-label">URL de la vignette (optionnel)</label><input class="form-input" id="f-thumb" placeholder="Collée depuis gram-extractor…" /></div>
+        <div class="form-group"><label class="form-label">URL Instagram <span class="req">*</span></label><div class="tag-row"><input class="form-input" id="f-url" placeholder="https://www.instagram.com/p/…" /><button class="btn-tag" id="f-extract-btn" onclick="window._extractThumb('f')">Extraire</button></div><input type="hidden" id="f-thumb" /><p id="f-extract-status" style="font-size:0.68rem;color:var(--muted);margin-top:6px"></p></div>
         <div class="form-group"><label class="form-label">Titre</label><input class="form-input" id="f-title" placeholder="Ce que ce post évoque pour toi…" /></div>
         <div class="form-group"><label class="form-label">Note personnelle</label><textarea class="form-textarea" id="f-note" rows="3" placeholder="Pourquoi garder ce post ?"></textarea></div>
         <div class="form-group"><label class="form-label">Tags</label><div class="tag-row"><input class="form-input" id="f-tag" placeholder="inspiration…" onkeydown="window._tagKd(event)" /><button class="btn-tag" onclick="window._addTag()">+ Tag</button></div><div class="tag-chips" id="tag-chips"></div></div>
@@ -367,8 +366,7 @@
       <div class="edit-sheet">
         <div class="sheet-handle"></div>
         <h2 class="sheet-title">Modifier <em>ce post</em></h2>
-        <div class="ef-group"><label class="ef-label">URL</label><input class="ef-input" id="ef-url" /></div>
-        <div class="ef-group"><label class="ef-label">URL de la vignette (optionnel)</label><input class="ef-input" id="ef-thumb" /></div>
+        <div class="ef-group"><label class="ef-label">URL</label><div class="ef-tag-row"><input class="ef-input" id="ef-url" /><button class="ef-btn-tag" onclick="window._extractThumb('ef')">Extraire</button></div><input type="hidden" id="ef-thumb" /><p id="ef-extract-status" style="font-size:0.68rem;color:var(--muted);margin-top:6px"></p></div>
         <div class="ef-group"><label class="ef-label">Titre</label><input class="ef-input" id="ef-title" /></div>
         <div class="ef-group"><label class="ef-label">Note</label><textarea class="ef-textarea" id="ef-note" rows="3"></textarea></div>
         <div class="ef-group"><label class="ef-label">Tags</label><div class="ef-tag-row"><input class="ef-input" id="ef-tag" placeholder="Ajouter…" onkeydown="window._editTagKd(event)" /><button class="ef-btn-tag" onclick="window._addEditTagG()">+ Tag</button></div><div class="ef-chips" id="ef-chips-g"></div></div>
@@ -706,6 +704,7 @@
   window._openModal=()=>{
     currentTags=[];currentCols=[];
     ['f-url','f-title','f-note','f-tag','f-thumb'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const fes=document.getElementById('f-extract-status');if(fes)fes.textContent='';
     const tc=document.getElementById('tag-chips');if(tc)tc.innerHTML='';
     const fe=document.getElementById('form-error');if(fe)fe.style.display='none';
     const bs=document.getElementById('btn-save');if(bs)bs.disabled=false;
@@ -720,6 +719,31 @@
   window._toggleCol=id=>{if(currentCols.includes(id))currentCols=currentCols.filter(c=>c!==id);else currentCols.push(id);renderModalCols();};
   function renderChips(){const el=document.getElementById('tag-chips');if(el)el.innerHTML=currentTags.map(t=>`<span class="tag-chip">#${esc(t)}<button onclick="window._removeTag('${esc(t)}')">✕</button></span>`).join('');}
   function renderModalCols(){const el=document.getElementById('modal-col-checks');if(!el)return;el.innerHTML=collections.length?collections.map(c=>`<span class="col-check-item ${currentCols.includes(c.id)?'selected':''}" onclick="window._toggleCol('${esc(c.id)}')">${esc(c.name)}</span>`).join(''):'<span style="font-size:0.7rem;color:var(--muted)">Crée une collection depuis l\'onglet Collections</span>';}
+
+  window._extractThumb=async(prefix)=>{
+    const url=document.getElementById(prefix+'-url').value.trim();
+    const statusEl=document.getElementById(prefix+'-extract-status');
+    const thumbEl=document.getElementById(prefix+'-thumb');
+    const btn=document.getElementById(prefix+'-extract-btn');
+    if(!url||!url.includes('instagram.com')){if(statusEl)statusEl.textContent='⚠ Colle d\'abord une URL Instagram valide.';return;}
+    if(btn)btn.disabled=true;
+    const setStatus=(msg)=>{if(statusEl)statusEl.textContent=msg;};
+    const attempts=[
+      async()=>{const r=await fetch(`https://www.instagram.com/oembed?url=${encodeURIComponent(url)}`);if(r.ok){const d=await r.json();if(d.thumbnail_url)return d.thumbnail_url;}return null;},
+      async()=>{const target=`https://www.instagram.com/oembed?url=${encodeURIComponent(url)}`;const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(target)}`);if(r.ok){const d=JSON.parse((await r.json()).contents);if(d.thumbnail_url)return d.thumbnail_url;}return null;},
+      async()=>{const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);if(r.ok){const html=(await r.json()).contents;const m=html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)||html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);if(m?.[1])return m[1];}return null;},
+      async()=>{const target=`https://www.instagram.com/oembed?url=${encodeURIComponent(url)}`;const r=await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`);if(r.ok){const d=await r.json();if(d.thumbnail_url)return d.thumbnail_url;}return null;}
+    ];
+    for(let i=0;i<attempts.length;i++){
+      setStatus(`⏳ Tentative ${i+1} / ${attempts.length}…`);
+      try{
+        const found=await attempts[i]();
+        if(found){thumbEl.value=found;setStatus('✅ Vignette trouvée.');if(btn)btn.disabled=false;return;}
+      }catch(_){}
+    }
+    setStatus('❌ Vignette introuvable — le post sera affiché sans vignette.');
+    if(btn)btn.disabled=false;
+  };
 
   window._savePost=async()=>{
     const url=document.getElementById('f-url').value.trim();
