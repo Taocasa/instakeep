@@ -353,6 +353,7 @@
         <div class="sheet-handle"></div>
         <div class="modal-header"><h2 class="modal-title">Nouveau <em>post</em></h2><button class="btn-close" onclick="window._closeModal()">✕</button></div>
         <div class="form-group"><label class="form-label">URL Instagram <span class="req">*</span></label><input class="form-input" id="f-url" placeholder="https://www.instagram.com/p/…" /></div>
+        <div class="form-group"><label class="form-label">URL de la vignette (optionnel)</label><input class="form-input" id="f-thumb" placeholder="Collée depuis gram-extractor…" /></div>
         <div class="form-group"><label class="form-label">Titre</label><input class="form-input" id="f-title" placeholder="Ce que ce post évoque pour toi…" /></div>
         <div class="form-group"><label class="form-label">Note personnelle</label><textarea class="form-textarea" id="f-note" rows="3" placeholder="Pourquoi garder ce post ?"></textarea></div>
         <div class="form-group"><label class="form-label">Tags</label><div class="tag-row"><input class="form-input" id="f-tag" placeholder="inspiration…" onkeydown="window._tagKd(event)" /><button class="btn-tag" onclick="window._addTag()">+ Tag</button></div><div class="tag-chips" id="tag-chips"></div></div>
@@ -367,6 +368,7 @@
         <div class="sheet-handle"></div>
         <h2 class="sheet-title">Modifier <em>ce post</em></h2>
         <div class="ef-group"><label class="ef-label">URL</label><input class="ef-input" id="ef-url" /></div>
+        <div class="ef-group"><label class="ef-label">URL de la vignette (optionnel)</label><input class="ef-input" id="ef-thumb" /></div>
         <div class="ef-group"><label class="ef-label">Titre</label><input class="ef-input" id="ef-title" /></div>
         <div class="ef-group"><label class="ef-label">Note</label><textarea class="ef-textarea" id="ef-note" rows="3"></textarea></div>
         <div class="ef-group"><label class="ef-label">Tags</label><div class="ef-tag-row"><input class="ef-input" id="ef-tag" placeholder="Ajouter…" onkeydown="window._editTagKd(event)" /><button class="ef-btn-tag" onclick="window._addEditTagG()">+ Tag</button></div><div class="ef-chips" id="ef-chips-g"></div></div>
@@ -703,7 +705,7 @@
 
   window._openModal=()=>{
     currentTags=[];currentCols=[];
-    ['f-url','f-title','f-note','f-tag'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['f-url','f-title','f-note','f-tag','f-thumb'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const tc=document.getElementById('tag-chips');if(tc)tc.innerHTML='';
     const fe=document.getElementById('form-error');if(fe)fe.style.display='none';
     const bs=document.getElementById('btn-save');if(bs)bs.disabled=false;
@@ -732,11 +734,7 @@
     if(saveBtn)saveBtn.disabled=true;
     showSaving(true);
     try{
-      let thumbnailUrl=null;
-      try{
-        const tResp=await fetch(`/api/thumbnail?url=${encodeURIComponent(url)}`);
-        if(tResp.ok){const tData=await tResp.json();thumbnailUrl=tData.thumbnail||null;}
-      }catch(_){}
+      const thumbnailUrl=document.getElementById('f-thumb').value.trim()||null;
       const data={url,postId:pid,title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,thumbnailUrl,createdAt:new Date().toISOString()};
       const ref=await addDoc(postsCol(),data);
       posts.unshift({id:ref.id,...data});
@@ -755,6 +753,7 @@
     editingPost=post;
     editTags['g']=[...(post.tags||[])];editCols['g']=[...(post.collections||[])];
     document.getElementById('ef-url').value=post.url||'';
+    document.getElementById('ef-thumb').value=post.thumbnailUrl||'';
     document.getElementById('ef-title').value=post.title||'';
     document.getElementById('ef-note').value=post.note||'';
     document.getElementById('ef-tag').value='';
@@ -775,6 +774,7 @@
     if(!editingPost)return;
     const id=editingPost.id;
     const url=document.getElementById('ef-url').value.trim();
+    const thumbnailUrl=document.getElementById('ef-thumb').value.trim()||null;
     const title=document.getElementById('ef-title').value.trim();
     const note=document.getElementById('ef-note').value.trim();
     const errEl=document.getElementById('ef-err-g');
@@ -783,7 +783,7 @@
     if(!pid){errEl.textContent="⚠ URL invalide.";errEl.style.display='block';return;}
     errEl.style.display='none';showSaving(true);
     try{
-      const data={url,postId:pid,title:title||'Post sans titre',note,tags:[...(editTags['g']||[])],collections:[...(editCols['g']||[])],updatedAt:new Date().toISOString()};
+      const data={url,postId:pid,title:title||'Post sans titre',note,thumbnailUrl,tags:[...(editTags['g']||[])],collections:[...(editCols['g']||[])],updatedAt:new Date().toISOString()};
       await updateDoc(doc(db,'users',currentUser.uid,'posts',id),data);
       const idx=posts.findIndex(p=>p.id===id);
       if(idx!==-1)posts[idx]={...posts[idx],...data};
