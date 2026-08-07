@@ -504,9 +504,11 @@
   function buildGridPost(post){
     return `<div class="grid-post" onclick="window._openDetail('${esc(post.id)}')">
       <div class="grid-thumb-clip">
-        ${post.postId
-          ?`<iframe src="https://www.instagram.com/p/${esc(post.postId)}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>`
-          :`<div class="grid-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1" opacity="0.35"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg></div>`}
+        ${post.thumbnailUrl
+          ?`<img src="${esc(post.thumbnailUrl)}" alt="${esc(post.title)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />`
+          :post.postId
+            ?`<iframe src="https://www.instagram.com/p/${esc(post.postId)}/embed/" frameborder="0" scrolling="no" allowtransparency="true"></iframe>`
+            :`<div class="grid-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1" opacity="0.35"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg></div>`}
       </div>
       <div class="grid-title-overlay"><span class="grid-title-text">${esc(post.title)}</span></div>
       <div class="grid-hover-overlay"></div>
@@ -557,8 +559,10 @@
            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
          </button>`
       :`<div class="fp-square" onclick="window._toggleFeedPreview('${esc(id)}','${esc(postId)}')">
-           <iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
-           <div class="fp-play-mask"></div>
+           ${(posts.find(p=>p.id===id)||{}).thumbnailUrl
+             ?`<img src="${esc((posts.find(p=>p.id===id)||{}).thumbnailUrl)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />`
+             :`<iframe src="${src}" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+               <div class="fp-play-mask"></div>`}
         </div>`;
   };
 
@@ -728,7 +732,12 @@
     if(saveBtn)saveBtn.disabled=true;
     showSaving(true);
     try{
-      const data={url,postId:pid,title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,createdAt:new Date().toISOString()};
+      let thumbnailUrl=null;
+      try{
+        const tResp=await fetch(`/api/thumbnail?url=${encodeURIComponent(url)}`);
+        if(tResp.ok){const tData=await tResp.json();thumbnailUrl=tData.thumbnail||null;}
+      }catch(_){}
+      const data={url,postId:pid,title:title||'Post sans titre',tags:[...currentTags],collections:[...currentCols],note,thumbnailUrl,createdAt:new Date().toISOString()};
       const ref=await addDoc(postsCol(),data);
       posts.unshift({id:ref.id,...data});
       window._closeModal();
